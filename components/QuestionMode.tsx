@@ -91,8 +91,8 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
       return (
           <div className="flex flex-col items-center justify-center h-full p-8 text-center">
               <div className="w-16 h-16 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-6"></div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Gerando Questões com IA</h2>
-              <p className="text-gray-500 max-w-md">
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Gerando Questões com IA</h2>
+              <p className="text-gray-500 dark:text-gray-400 max-w-md">
                   O ElectroBot está criando questões inéditas sobre <strong>{topicName}</strong> para você...
               </p>
           </div>
@@ -103,21 +103,21 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
       const percentage = Math.round((score / questions.length) * 100);
       return (
           <div className="flex flex-col items-center justify-center h-full p-8 animate-fade-in-up">
-              <div className="bg-white p-10 rounded-3xl shadow-xl text-center max-w-lg w-full border border-gray-100">
-                  <div className="inline-flex p-4 bg-yellow-50 rounded-full mb-6">
+              <div className="bg-white dark:bg-slate-800 p-10 rounded-3xl shadow-xl text-center max-w-lg w-full border border-gray-100 dark:border-slate-700">
+                  <div className="inline-flex p-4 bg-yellow-50 dark:bg-yellow-900/30 rounded-full mb-6">
                       <Trophy className="w-12 h-12 text-yellow-500" />
                   </div>
-                  <h2 className="text-3xl font-bold text-gray-900 mb-2">Quiz Finalizado!</h2>
-                  <p className="text-gray-500 mb-8">Você completou os exercícios de {topicName}.</p>
+                  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Quiz Finalizado!</h2>
+                  <p className="text-gray-500 dark:text-gray-400 mb-8">Você completou os exercícios de {topicName}.</p>
                   
                   <div className="grid grid-cols-2 gap-4 mb-8">
-                      <div className="bg-gray-50 p-4 rounded-2xl">
-                          <span className="block text-3xl font-bold text-primary-600">{score}/{questions.length}</span>
-                          <span className="text-xs text-gray-400 uppercase font-bold">Acertos</span>
+                      <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-2xl">
+                          <span className="block text-3xl font-bold text-primary-600 dark:text-primary-400">{score}/{questions.length}</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500 uppercase font-bold">Acertos</span>
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-2xl">
-                          <span className={`block text-3xl font-bold ${percentage >= 70 ? 'text-green-500' : 'text-orange-500'}`}>{percentage}%</span>
-                          <span className="text-xs text-gray-400 uppercase font-bold">Aproveitamento</span>
+                      <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-2xl">
+                          <span className={`block text-3xl font-bold ${percentage >= 70 ? 'text-green-500 dark:text-green-400' : 'text-orange-500 dark:text-orange-400'}`}>{percentage}%</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500 uppercase font-bold">Aproveitamento</span>
                       </div>
                   </div>
 
@@ -138,7 +138,7 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
                       </button>
                       <button 
                           onClick={onExit}
-                          className="w-full py-3 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl font-bold transition-colors"
+                          className="w-full py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold transition-colors"
                       >
                           Voltar ao Menu
                       </button>
@@ -152,9 +152,9 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
       return (
         <div className="flex flex-col items-center justify-center h-full p-8 text-center">
             <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
-            <h2 className="text-xl font-bold text-gray-800">Erro ao carregar</h2>
-            <p className="text-gray-500 mb-6">Não foi possível gerar questões. Tente novamente.</p>
-            <button onClick={onExit} className="px-6 py-3 bg-gray-900 text-white rounded-xl">Voltar</button>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Erro ao carregar</h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">Não foi possível gerar questões. Tente novamente.</p>
+            <button onClick={onExit} className="px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl">Voltar</button>
         </div>
       );
   }
@@ -164,20 +164,20 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
       {/* Header Progress */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center space-x-4">
-            <button onClick={onExit} className="text-gray-400 hover:text-gray-600 font-medium text-sm flex items-center">
+            <button onClick={onExit} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-medium text-sm flex items-center">
                 <Home className="w-4 h-4 mr-1" /> Sair
             </button>
             <span className="text-sm font-semibold text-gray-400">
                 Questão {currentIndex + 1} de {questions.length}
             </span>
         </div>
-        <div className="flex-1 mx-6 h-2 bg-gray-200 rounded-full overflow-hidden max-w-xs">
+        <div className="flex-1 mx-6 h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden max-w-xs">
             <div 
                 className="h-full bg-primary-500 transition-all duration-300" 
                 style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
             ></div>
         </div>
-        <span className="text-xs px-3 py-1 bg-primary-50 text-primary-700 rounded-full font-bold uppercase tracking-wide shadow-sm border border-primary-100 truncate max-w-[200px]">
+        <span className="text-xs px-3 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-full font-bold uppercase tracking-wide shadow-sm border border-primary-100 dark:border-primary-800 truncate max-w-[200px]">
             {topicName}
         </span>
       </div>
@@ -189,35 +189,35 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
             <div>
                 <div className="flex items-center justify-between mb-4">
                     <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${
-                        currentQuestion.difficulty === 'Fácil' ? 'bg-green-100 text-green-700' :
-                        currentQuestion.difficulty === 'Médio' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-red-100 text-red-700'
+                        currentQuestion.difficulty === 'Fácil' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                        currentQuestion.difficulty === 'Médio' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
+                        'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
                     }`}>
                         {currentQuestion.difficulty}
                     </span>
                 </div>
-                <h2 className="text-xl font-semibold text-gray-900 leading-relaxed">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white leading-relaxed">
                     {currentQuestion.text}
                 </h2>
             </div>
 
             <div className="space-y-3">
                 {currentQuestion.options.map((option, index) => {
-                    let styles = "border-gray-200 hover:border-primary-400 hover:bg-blue-50/50";
-                    let icon = <div className="w-5 h-5 rounded-full border border-gray-300 group-hover:border-primary-500"></div>;
+                    let styles = "border-gray-200 dark:border-slate-700 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-blue-50/50 dark:hover:bg-slate-700";
+                    let icon = <div className="w-5 h-5 rounded-full border border-gray-300 dark:border-gray-500 group-hover:border-primary-500"></div>;
                     
                     if (isAnswered) {
                         if (index === currentQuestion.correctAnswerIndex) {
-                            styles = "border-green-500 bg-green-50";
-                            icon = <CheckCircle className="w-5 h-5 text-green-600" />;
+                            styles = "border-green-500 bg-green-50 dark:bg-green-900/20";
+                            icon = <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />;
                         } else if (index === selectedOption && selectedOption !== currentQuestion.correctAnswerIndex) {
-                            styles = "border-red-500 bg-red-50";
-                            icon = <XCircle className="w-5 h-5 text-red-500" />;
+                            styles = "border-red-500 bg-red-50 dark:bg-red-900/20";
+                            icon = <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />;
                         } else {
-                            styles = "border-gray-200 opacity-50";
+                            styles = "border-gray-200 dark:border-slate-800 opacity-50";
                         }
                     } else if (selectedOption === index) {
-                        styles = "border-primary-500 bg-primary-50 ring-1 ring-primary-500";
+                        styles = "border-primary-500 bg-primary-50 dark:bg-primary-900/20 ring-1 ring-primary-500";
                         icon = <div className="w-5 h-5 rounded-full border-[5px] border-primary-500"></div>;
                     }
 
@@ -226,10 +226,10 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
                             key={index}
                             onClick={() => handleSelect(index)}
                             disabled={isAnswered}
-                            className={`w-full p-4 text-left rounded-xl border-2 flex items-center space-x-4 transition-all duration-200 group ${styles}`}
+                            className={`w-full p-4 text-left rounded-xl border-2 flex items-center space-x-4 transition-all duration-200 group bg-white dark:bg-slate-800 ${styles}`}
                         >
                             <div className="flex-shrink-0">{icon}</div>
-                            <span className={`text-sm md:text-base font-medium ${isAnswered && index === currentQuestion.correctAnswerIndex ? 'text-green-800' : 'text-gray-700'}`}>
+                            <span className={`text-sm md:text-base font-medium ${isAnswered && index === currentQuestion.correctAnswerIndex ? 'text-green-800 dark:text-green-300' : 'text-gray-700 dark:text-gray-200'}`}>
                                 {option}
                             </span>
                         </button>
@@ -245,8 +245,8 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
                         disabled={selectedOption === null}
                         className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all ${
                             selectedOption !== null 
-                            ? 'bg-secondary-900 hover:bg-black hover:shadow-xl transform hover:-translate-y-0.5' 
-                            : 'bg-gray-300 cursor-not-allowed'
+                            ? 'bg-secondary-900 hover:bg-black dark:bg-primary-600 dark:hover:bg-primary-500 hover:shadow-xl transform hover:-translate-y-0.5' 
+                            : 'bg-gray-300 dark:bg-slate-700 cursor-not-allowed'
                         }`}
                     >
                         Responder
@@ -270,14 +270,14 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
             {isAnswered && (
                 <div className="animate-fade-in-up space-y-4">
                     {/* Base Explanation Card */}
-                    <div className={`p-6 rounded-2xl border ${isCorrect ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100 shadow-sm'}`}>
+                    <div className={`p-6 rounded-2xl border ${isCorrect ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900' : 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900 shadow-sm'}`}>
                         <div className="flex items-center space-x-2 mb-3">
-                            {isCorrect ? <CheckCircle className="w-5 h-5 text-green-600" /> : <AlertCircle className="w-5 h-5 text-red-500" />}
-                            <h3 className={`font-bold ${isCorrect ? 'text-green-800' : 'text-red-800'}`}>
+                            {isCorrect ? <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" /> : <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400" />}
+                            <h3 className={`font-bold ${isCorrect ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}`}>
                                 {isCorrect ? 'Correto!' : 'Incorreto'}
                             </h3>
                         </div>
-                        <p className="text-sm text-gray-700 leading-relaxed">
+                        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                             {currentQuestion.explanation}
                         </p>
                     </div>

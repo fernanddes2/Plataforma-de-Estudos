@@ -12,46 +12,46 @@ interface LearningModeProps {
 const SkeletonLoader = () => (
   <div className="animate-pulse space-y-8 max-w-4xl mx-auto">
     {/* AI Generation Header */}
-    <div className="flex items-center justify-center space-x-2 mb-8 text-primary-600">
+    <div className="flex items-center justify-center space-x-2 mb-8 text-primary-600 dark:text-primary-400">
       <Sparkles className="w-5 h-5 animate-spin-slow" />
       <span className="text-sm font-medium">O ElectroBot está escrevendo sua aula...</span>
     </div>
 
     {/* Title Skeleton */}
-    <div className="space-y-4 pb-8 border-b border-gray-100">
-      <div className="h-10 bg-gray-200 rounded-lg w-3/4"></div>
+    <div className="space-y-4 pb-8 border-b border-gray-100 dark:border-slate-700">
+      <div className="h-10 bg-gray-200 dark:bg-slate-700 rounded-lg w-3/4"></div>
     </div>
 
     {/* Section 1 */}
     <div className="space-y-3">
-      <div className="h-8 bg-gray-200 rounded-lg w-1/3 mb-4"></div>
-      <div className="h-4 bg-gray-200 rounded w-full"></div>
-      <div className="h-4 bg-gray-200 rounded w-full"></div>
-      <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+      <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/3 mb-4"></div>
+      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-full"></div>
+      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-full"></div>
+      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-5/6"></div>
     </div>
 
     {/* Section 2 */}
     <div className="space-y-3 pt-4">
-      <div className="h-8 bg-gray-200 rounded-lg w-2/5 mb-4"></div>
-      <div className="h-4 bg-gray-200 rounded w-11/12"></div>
-      <div className="h-4 bg-gray-200 rounded w-full"></div>
-      <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+      <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-lg w-2/5 mb-4"></div>
+      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-11/12"></div>
+      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-full"></div>
+      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-4/5"></div>
     </div>
 
      {/* Section 3 (List style) */}
      <div className="space-y-4 pt-4">
-      <div className="h-8 bg-gray-200 rounded-lg w-1/4 mb-4"></div>
+      <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-lg w-1/4 mb-4"></div>
       <div className="flex items-center space-x-3">
-         <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-         <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+         <div className="w-2 h-2 bg-gray-300 dark:bg-slate-600 rounded-full"></div>
+         <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-3/4"></div>
       </div>
       <div className="flex items-center space-x-3">
-         <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-         <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+         <div className="w-2 h-2 bg-gray-300 dark:bg-slate-600 rounded-full"></div>
+         <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-2/3"></div>
       </div>
       <div className="flex items-center space-x-3">
-         <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-         <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+         <div className="w-2 h-2 bg-gray-300 dark:bg-slate-600 rounded-full"></div>
+         <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-4/5"></div>
       </div>
     </div>
   </div>
@@ -67,7 +67,6 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
   const [shouldRestoreScroll, setShouldRestoreScroll] = useState(false);
   
   const contentRef = useRef<HTMLDivElement>(null);
-  // Fix: Replaced NodeJS.Timeout with ReturnType<typeof setTimeout> for browser compatibility.
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const filteredModules = MOCK_LEARNING_MODULES.filter(module => 
@@ -80,7 +79,6 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
     setLessonContent(null);
     setExtractedTopics(null);
     
-    // Try to fetch cached content from localStorage to ensure consistency
     const cacheKey = `electroMind_content_${module.id}`;
     let content = localStorage.getItem(cacheKey);
 
@@ -89,13 +87,10 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
         setLoading(false);
         setShouldRestoreScroll(true);
     } else {
-        // Generate new content
         content = await generateLessonContent(module.title);
         setLessonContent(content);
         setLoading(false);
         setShouldRestoreScroll(true);
-        
-        // Cache the content
         try {
             localStorage.setItem(cacheKey, content);
         } catch (e) {
@@ -103,25 +98,19 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
         }
     }
 
-    // Now, extract topics from the content
     setLoadingTopics(true);
     const topics = await extractTopicsFromLesson(content);
     setExtractedTopics(topics);
     setLoadingTopics(false);
   };
 
-  // Scroll Restoration Effect
   useEffect(() => {
     if (!loading && lessonContent && selectedModule && shouldRestoreScroll && contentRef.current) {
-        // Small timeout to allow DOM to paint and layout to settle
         const timer = setTimeout(() => {
             if (!contentRef.current) return;
             
             const progress = learningProgress[selectedModule.id] || 0;
             
-            // Calculate target scroll position based on percentage
-            // If progress is 0 or 100, we generally start at top (or review mode), 
-            // but if user is resuming (e.g. 50%), we scroll there.
             if (progress > 0 && progress < 100) {
                 const { scrollHeight, clientHeight } = contentRef.current;
                 const maxScroll = scrollHeight - clientHeight;
@@ -137,7 +126,7 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
                 contentRef.current.scrollTop = 0;
             }
             setShouldRestoreScroll(false);
-        }, 200); // Increased timeout slightly for reliability
+        }, 200); 
         return () => clearTimeout(timer);
     }
   }, [loading, lessonContent, selectedModule, shouldRestoreScroll, learningProgress]);
@@ -164,16 +153,10 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
       
       if (maxScroll <= 0) return;
       
-      // Calculate percentage (0-100)
-      // Cap at 98% via scrolling so 100% is reserved for the manual button click
       const percentage = Math.min(98, Math.floor((scrollTop / maxScroll) * 100));
-      
       const currentSaved = learningProgress[selectedModule.id] || 0;
 
-      // Update only if we are further down than before, and not yet completed
-      // This implements "Max Progress" tracking so scrolling up doesn't lose progress
       if (currentSaved < 100 && percentage > currentSaved) {
-          // Debounce updates to avoid spamming state/storage
           if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
           
           scrollTimeoutRef.current = setTimeout(() => {
@@ -182,19 +165,18 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
       }
   };
 
-  // Lesson Viewer Modal
   if (selectedModule) {
       const progress = learningProgress[selectedModule.id] || 0;
       const isCompleted = progress === 100;
 
       return (
-          <div className="fixed inset-0 z-50 bg-white flex flex-col animate-fade-in">
+          <div className="fixed inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col animate-fade-in">
               {/* Modal Header */}
-              <div className="bg-secondary-900 text-white p-4 flex justify-between items-center shadow-md flex-shrink-0 z-10">
+              <div className="bg-secondary-900 dark:bg-slate-800 text-white p-4 flex justify-between items-center shadow-md flex-shrink-0 z-10 border-b border-slate-700">
                   <div className="flex items-center space-x-3 overflow-hidden">
                       <BookOpen className="w-6 h-6 text-primary-500 flex-shrink-0" />
                       <div className="overflow-hidden">
-                          <h2 className="font-bold text-lg truncate">{selectedModule.title}</h2>
+                          <h2 className="font-bold text-lg truncate text-white">{selectedModule.title}</h2>
                           <div className="flex items-center space-x-2 text-xs text-gray-400">
                               <span>Guia de Estudo IA</span>
                               {!loading && progress > 0 && progress < 100 && (
@@ -214,13 +196,13 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
                                 onUpdateProgress(selectedModule.id, 0);
                                 if (contentRef.current) contentRef.current.scrollTop = 0;
                             }} 
-                            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors"
+                            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 dark:hover:bg-slate-700 rounded-full transition-colors"
                             title="Reiniciar Progresso"
                         >
                             <RotateCcw className="w-5 h-5" />
                         </button>
                     )}
-                    <button onClick={handleCloseModule} className="p-2 hover:bg-gray-800 rounded-full transition-colors">
+                    <button onClick={handleCloseModule} className="p-2 hover:bg-gray-800 dark:hover:bg-slate-700 rounded-full transition-colors">
                         <X className="w-6 h-6" />
                     </button>
                   </div>
@@ -228,40 +210,40 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
               
               {/* Modal Content Area */}
               <div 
-                className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 custom-scrollbar scroll-smooth" 
+                className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 dark:bg-slate-900 custom-scrollbar scroll-smooth" 
                 ref={contentRef}
                 onScroll={handleScroll}
               >
-                  <div className="max-w-4xl mx-auto bg-white p-6 md:p-10 rounded-2xl shadow-sm min-h-full mb-20 transition-all">
+                  <div className="max-w-4xl mx-auto bg-white dark:bg-slate-800 p-6 md:p-10 rounded-2xl shadow-sm min-h-full mb-20 transition-all dark:border dark:border-slate-700">
                       {loading ? (
                           <SkeletonLoader />
                       ) : (
-                          <div className="prose prose-slate max-w-none text-gray-800 animate-fade-in-up">
+                          <div className="prose prose-slate dark:prose-invert max-w-none text-gray-800 dark:text-slate-200 animate-fade-in-up">
                               {lessonContent?.split('\n').map((line, idx) => {
                                   if (line.trim().startsWith('# ')) {
-                                      return <h1 key={idx} className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-6 pb-4 border-b border-gray-100">{line.replace(/^#\s+/, '')}</h1>;
+                                      return <h1 key={idx} className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white mb-6 pb-4 border-b border-gray-100 dark:border-slate-700">{line.replace(/^#\s+/, '')}</h1>;
                                   }
-                                  return null; // Render title first
+                                  return null;
                               })}
 
                               {/* Topics Covered Section */}
                               {loadingTopics && (
-                                <div className="my-8 p-6 bg-gray-50 rounded-lg animate-pulse">
-                                  <div className="h-5 w-1/3 bg-gray-200 rounded mb-4"></div>
+                                <div className="my-8 p-6 bg-gray-50 dark:bg-slate-700 rounded-lg animate-pulse">
+                                  <div className="h-5 w-1/3 bg-gray-200 dark:bg-slate-600 rounded mb-4"></div>
                                   <div className="space-y-2">
-                                    <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
-                                    <div className="h-4 w-2/3 bg-gray-200 rounded"></div>
-                                    <div className="h-4 w-4/5 bg-gray-200 rounded"></div>
+                                    <div className="h-4 w-3/4 bg-gray-200 dark:bg-slate-600 rounded"></div>
+                                    <div className="h-4 w-2/3 bg-gray-200 dark:bg-slate-600 rounded"></div>
+                                    <div className="h-4 w-4/5 bg-gray-200 dark:bg-slate-600 rounded"></div>
                                   </div>
                                 </div>
                               )}
                               {!loadingTopics && extractedTopics && (
-                                <div className="my-8 p-6 bg-primary-50 border-l-4 border-primary-500 rounded-r-lg">
-                                    <h3 className="text-lg font-bold text-primary-800 mb-3 flex items-center">
+                                <div className="my-8 p-6 bg-primary-50 dark:bg-primary-900/20 border-l-4 border-primary-500 rounded-r-lg">
+                                    <h3 className="text-lg font-bold text-primary-800 dark:text-primary-300 mb-3 flex items-center">
                                       <ListChecks className="w-5 h-5 mr-2" />
                                       Tópicos Abordados
                                     </h3>
-                                    <div className="text-primary-900/80 space-y-1 whitespace-pre-wrap text-sm leading-relaxed">
+                                    <div className="text-primary-900/80 dark:text-primary-200 space-y-1 whitespace-pre-wrap text-sm leading-relaxed">
                                         {extractedTopics}
                                     </div>
                                 </div>
@@ -269,33 +251,26 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
 
                               {lessonContent?.split('\n').map((line, idx) => {
                                   const trimmed = line.trim();
-                                  
-                                  // Skip title, it's rendered above
                                   if (trimmed.startsWith('# ')) return null;
-
-                                  // Spacer for empty lines
                                   if (!trimmed) return <br key={idx} className="block h-2 content-['']" />;
                                   
-                                  // Headers
                                   if (trimmed.startsWith('## ')) {
-                                      return <h2 key={idx} className="text-2xl font-bold text-primary-700 mt-8 mb-4 flex items-center"><span className="w-2 h-8 bg-primary-500 mr-3 rounded-full"></span>{trimmed.replace(/^##\s+/, '')}</h2>;
+                                      return <h2 key={idx} className="text-2xl font-bold text-primary-700 dark:text-primary-400 mt-8 mb-4 flex items-center"><span className="w-2 h-8 bg-primary-500 mr-3 rounded-full"></span>{trimmed.replace(/^##\s+/, '')}</h2>;
                                   }
                                   if (trimmed.startsWith('### ')) {
-                                      return <h3 key={idx} className="text-xl font-bold text-gray-800 mt-6 mb-3">{trimmed.replace(/^###\s+/, '')}</h3>;
+                                      return <h3 key={idx} className="text-xl font-bold text-gray-800 dark:text-slate-200 mt-6 mb-3">{trimmed.replace(/^###\s+/, '')}</h3>;
                                   }
                                   
-                                  // List items
                                   if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
                                       return (
                                         <div key={idx} className="flex items-start mb-2 ml-4">
-                                            <span className="mr-2 text-primary-500 font-bold min-w-[10px]">•</span>
-                                            <p className="leading-relaxed">{trimmed.replace(/^[-*]\s+/, '')}</p>
+                                            <span className="mr-2 text-primary-500 dark:text-primary-400 font-bold min-w-[10px]">•</span>
+                                            <p className="leading-relaxed text-gray-700 dark:text-slate-300">{trimmed.replace(/^[-*]\s+/, '')}</p>
                                         </div>
                                       );
                                   }
                                   
-                                  // Standard Paragraph - Render directly to preserve Unicode symbols
-                                  return <p key={idx} className="text-base md:text-lg leading-relaxed text-gray-700 text-justify">{line}</p>;
+                                  return <p key={idx} className="text-base md:text-lg leading-relaxed text-gray-700 dark:text-slate-300 text-justify">{line}</p>;
                               })}
                           </div>
                       )}
@@ -304,13 +279,13 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
 
               {/* Footer Action */}
               {!loading && (
-                <div className="absolute bottom-0 left-0 w-full p-4 bg-white border-t border-gray-200 flex justify-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                <div className="absolute bottom-0 left-0 w-full p-4 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 flex justify-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                     <button 
                         onClick={handleCompleteLesson}
                         className={`
                             px-8 py-3 rounded-xl font-bold flex items-center space-x-2 transition-all transform hover:-translate-y-1 shadow-lg
                             ${isCompleted 
-                                ? 'bg-green-100 text-green-700 border border-green-200' 
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800' 
                                 : 'bg-primary-600 hover:bg-primary-700 text-white hover:shadow-primary-500/30'}
                         `}
                     >
@@ -335,8 +310,8 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Conteúdos e Aulas</h1>
-        <p className="text-gray-500 mt-2">Guias de estudo gerados por IA para todas as disciplinas de Engenharia Elétrica.</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Conteúdos e Aulas</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-2">Guias de estudo gerados por IA para todas as disciplinas de Engenharia Elétrica.</p>
 
         {/* Search Bar */}
         <div className="mt-6 relative max-w-xl">
@@ -345,7 +320,7 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
             </div>
             <input
                 type="text"
-                className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-slate-700 rounded-xl leading-5 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm"
                 placeholder="Buscar módulo (ex: Circuitos, Controle...)"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -361,19 +336,19 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
           return (
             <div 
                 key={module.id} 
-                className={`bg-white rounded-2xl p-6 border shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer ${isCompleted ? 'border-green-200 bg-green-50/30' : 'border-gray-100'}`} 
+                className={`bg-white dark:bg-slate-800 rounded-2xl p-6 border shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer ${isCompleted ? 'border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-900/10' : 'border-gray-100 dark:border-slate-700'}`} 
                 onClick={() => handleOpenModule(module)}
             >
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1 mr-4">
-                  <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-1 group-hover:text-primary-600 transition-colors" title={module.title}>{module.title}</h3>
-                  <p className="text-gray-500 text-sm line-clamp-2">{module.description}</p>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1 line-clamp-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" title={module.title}>{module.title}</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm line-clamp-2">{module.description}</p>
                 </div>
-                <div className={`p-3 rounded-full flex-shrink-0 transition-colors ${isCompleted ? 'bg-green-100' : 'bg-blue-50 group-hover:bg-primary-50'}`}>
+                <div className={`p-3 rounded-full flex-shrink-0 transition-colors ${isCompleted ? 'bg-green-100 dark:bg-green-900/30' : 'bg-blue-50 dark:bg-blue-900/20 group-hover:bg-primary-50 dark:group-hover:bg-primary-900/30'}`}>
                     {isCompleted ? (
-                         <CheckCircle className="w-6 h-6 text-green-600" />
+                         <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
                     ) : (
-                         <PlayCircle className="w-6 h-6 text-primary-600" />
+                         <PlayCircle className="w-6 h-6 text-primary-600 dark:text-primary-400" />
                     )}
                 </div>
               </div>
@@ -381,23 +356,23 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
               {/* Progress Bar */}
               <div className="mb-4">
                 <div className="flex justify-between text-xs font-semibold mb-1">
-                    <span className={isCompleted ? 'text-green-600' : 'text-gray-400'}>{isCompleted ? 'Concluído' : 'Progresso'}</span>
-                    <span className={isCompleted ? 'text-green-600' : 'text-gray-600'}>{progress}%</span>
+                    <span className={isCompleted ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}>{isCompleted ? 'Concluído' : 'Progresso'}</span>
+                    <span className={isCompleted ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-300'}>{progress}%</span>
                 </div>
-                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
                   <div 
-                    className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-green-500' : 'bg-primary-500'}`}
+                    className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-green-500 dark:bg-green-400' : 'bg-primary-500 dark:bg-primary-400'}`}
                     style={{ width: `${progress}%` }}
                   ></div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+              <div className="flex items-center justify-between pt-4 border-t border-gray-50 dark:border-slate-700">
                 <div className="flex items-center text-gray-400 text-sm">
                   <Clock className="w-4 h-4 mr-1" />
                   <span>Leitura ~15 min</span>
                 </div>
-                <button className={`text-sm font-bold flex items-center ${isCompleted ? 'text-green-600' : 'text-primary-600 group-hover:text-primary-700'}`}>
+                <button className={`text-sm font-bold flex items-center ${isCompleted ? 'text-green-600 dark:text-green-400' : 'text-primary-600 dark:text-primary-400 group-hover:text-primary-700 dark:group-hover:text-primary-300'}`}>
                   {isCompleted ? 'Revisar Conteúdo' : 'Acessar Conteúdo'}
                   <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                 </button>
@@ -409,7 +384,7 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
 
       {filteredModules.length === 0 && (
         <div className="text-center py-12">
-            <p className="text-gray-500">Nenhum módulo encontrado para "{searchTerm}".</p>
+            <p className="text-gray-500 dark:text-gray-400">Nenhum módulo encontrado para "{searchTerm}".</p>
         </div>
       )}
     </div>

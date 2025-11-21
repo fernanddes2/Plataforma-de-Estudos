@@ -16,6 +16,15 @@ const App: React.FC = () => {
   const [isExamMode, setIsExamMode] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
+  // Theme State
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('electroMindTheme') === 'dark' ||
+        (!localStorage.getItem('electroMindTheme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+    return false;
+  });
+
   // Local Storage Stats (Dashboard)
   const [stats, setStats] = useState(() => {
       try {
@@ -27,7 +36,6 @@ const App: React.FC = () => {
   });
 
   // Local Storage Learning Progress
-  // Format: { "lm-0": 100, "lm-5": 50 }
   const [learningProgress, setLearningProgress] = useState<Record<string, number>>(() => {
     try {
       const saved = localStorage.getItem('electroMindLearning');
@@ -36,6 +44,22 @@ const App: React.FC = () => {
       return {};
     }
   });
+
+  // Theme Effect
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (isDarkMode) {
+      root.classList.add('dark');
+      localStorage.setItem('electroMindTheme', 'dark');
+    } else {
+      root.classList.remove('dark');
+      localStorage.setItem('electroMindTheme', 'light');
+    }
+  }, [isDarkMode]);
+
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode);
+  };
 
   useEffect(() => {
       localStorage.setItem('electroMindStats', JSON.stringify(stats));
@@ -48,7 +72,6 @@ const App: React.FC = () => {
   const handleUpdateStats = (isCorrect: boolean) => {
     setStats((prev: any) => {
         const newSolved = prev.questionsSolved + 1;
-        // Calculate new accuracy moving average
         const oldCorrect = Math.round((prev.accuracy / 100) * prev.questionsSolved);
         const newCorrect = oldCorrect + (isCorrect ? 1 : 0);
         const newAccuracy = Math.round((newCorrect / newSolved) * 100);
@@ -130,24 +153,26 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex font-sans text-slate-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex font-sans text-slate-900 dark:text-slate-100 transition-colors duration-200">
       <Sidebar 
         currentView={currentView} 
         onNavigate={handleNavigate} 
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
+        isDarkMode={isDarkMode}
+        toggleTheme={toggleTheme}
       />
       
       <main className="flex-1 relative flex flex-col w-full max-w-[100vw] overflow-x-hidden">
         {/* Mobile Header */}
-        <header className="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center space-x-2 text-primary-600">
+        <header className="lg:hidden bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between sticky top-0 z-30 transition-colors">
+          <div className="flex items-center space-x-2 text-primary-600 dark:text-primary-400">
             <Zap className="w-6 h-6 fill-current" />
-            <span className="text-xl font-bold tracking-tight">Electro<span className="text-secondary-900">Mind</span></span>
+            <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Electro<span className="text-secondary-900 dark:text-primary-400">Mind</span></span>
           </div>
           <button 
             onClick={() => setIsSidebarOpen(true)}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+            className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"
           >
             <Menu className="w-6 h-6" />
           </button>
