@@ -1,71 +1,333 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_LEARNING_MODULES } from '../constants';
-import { PlayCircle, CheckCircle, Clock, ArrowRight, Search, BookOpen, X, AlertCircle } from 'lucide-react';
-import { generateLessonContent } from '../services/geminiService';
+import { PlayCircle, CheckCircle, Clock, ArrowRight, Search, BookOpen, X, CheckSquare, Sparkles, RotateCcw, ListChecks } from 'lucide-react';
+import { generateLessonContent, extractTopicsFromLesson } from '../services/geminiService';
+import { LearningModule } from '../types';
 
-const LearningMode: React.FC = () => {
+interface LearningModeProps {
+  learningProgress: Record<string, number>;
+  onUpdateProgress: (moduleId: string, progress: number) => void;
+}
+
+const SkeletonLoader = () => (
+  <div className="animate-pulse space-y-8 max-w-4xl mx-auto">
+    {/* AI Generation Header */}
+    <div className="flex items-center justify-center space-x-2 mb-8 text-primary-600">
+      <Sparkles className="w-5 h-5 animate-spin-slow" />
+      <span className="text-sm font-medium">O ElectroBot está escrevendo sua aula...</span>
+    </div>
+
+    {/* Title Skeleton */}
+    <div className="space-y-4 pb-8 border-b border-gray-100">
+      <div className="h-10 bg-gray-200 rounded-lg w-3/4"></div>
+    </div>
+
+    {/* Section 1 */}
+    <div className="space-y-3">
+      <div className="h-8 bg-gray-200 rounded-lg w-1/3 mb-4"></div>
+      <div className="h-4 bg-gray-200 rounded w-full"></div>
+      <div className="h-4 bg-gray-200 rounded w-full"></div>
+      <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+    </div>
+
+    {/* Section 2 */}
+    <div className="space-y-3 pt-4">
+      <div className="h-8 bg-gray-200 rounded-lg w-2/5 mb-4"></div>
+      <div className="h-4 bg-gray-200 rounded w-11/12"></div>
+      <div className="h-4 bg-gray-200 rounded w-full"></div>
+      <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+    </div>
+
+     {/* Section 3 (List style) */}
+     <div className="space-y-4 pt-4">
+      <div className="h-8 bg-gray-200 rounded-lg w-1/4 mb-4"></div>
+      <div className="flex items-center space-x-3">
+         <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+         <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+      </div>
+      <div className="flex items-center space-x-3">
+         <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+         <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+      </div>
+      <div className="flex items-center space-x-3">
+         <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+         <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+      </div>
+    </div>
+  </div>
+);
+
+const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateProgress }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedModule, setSelectedModule] = useState<string | null>(null);
+  const [selectedModule, setSelectedModule] = useState<LearningModule | null>(null);
   const [lessonContent, setLessonContent] = useState<string | null>(null);
+  const [extractedTopics, setExtractedTopics] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingTopics, setLoadingTopics] = useState(false);
+  const [shouldRestoreScroll, setShouldRestoreScroll] = useState(false);
+  
+  const contentRef = useRef<HTMLDivElement>(null);
+  // Fix: Replaced NodeJS.Timeout with ReturnType<typeof setTimeout> for browser compatibility.
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const filteredModules = MOCK_LEARNING_MODULES.filter(module => 
     module.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleOpenModule = async (title: string) => {
-    setSelectedModule(title);
+  const handleOpenModule = async (module: LearningModule) => {
+    setSelectedModule(module);
     setLoading(true);
     setLessonContent(null);
+    setExtractedTopics(null);
     
-    const content = await generateLessonContent(title);
-    setLessonContent(content);
-    setLoading(false);
+    // Try to fetch cached content from localStorage to ensure consistency
+    const cacheKey = `electroMind_content_${module.id}`;
+    let content = localStorage.getItem(cacheKey);
+
+    if (content) {
+        setLessonContent(content);
+        setLoading(false);
+        setShouldRestoreScroll(true);
+    } else {
+        // Generate new content
+        content = await generateLessonContent(module.title);
+        setLessonContent(content);
+        setLoading(false);
+        setShouldRestoreScroll(true);
+        
+        // Cache the content
+        try {
+            localStorage.setItem(cacheKey, content);
+        } catch (e) {
+            console.warn("Falha ao cachear conteúdo (Storage cheio)");
+        }
+    }
+
+    // Now, extract topics from the content
+    setLoadingTopics(true);
+    const topics = await extractTopicsFromLesson(content);
+    setExtractedTopics(topics);
+    setLoadingTopics(false);
   };
+
+  // Scroll Restoration Effect
+  useEffect(() => {
+    if (!loading && lessonContent && selectedModule && shouldRestoreScroll && contentRef.current) {
+        // Small timeout to allow DOM to paint and layout to settle
+        const timer = setTimeout(() => {
+            if (!contentRef.current) return;
+            
+            const progress = learningProgress[selectedModule.id] || 0;
+            
+            // Calculate target scroll position based on percentage
+            // If progress is 0 or 100, we generally start at top (or review mode), 
+            // but if user is resuming (e.g. 50%), we scroll there.
+            if (progress > 0 && progress < 100) {
+                const { scrollHeight, clientHeight } = contentRef.current;
+                const maxScroll = scrollHeight - clientHeight;
+                
+                if (maxScroll > 0) {
+                    const targetScroll = (progress / 100) * maxScroll;
+                    contentRef.current.scrollTo({
+                        top: targetScroll,
+                        behavior: 'smooth'
+                    });
+                }
+            } else {
+                contentRef.current.scrollTop = 0;
+            }
+            setShouldRestoreScroll(false);
+        }, 200); // Increased timeout slightly for reliability
+        return () => clearTimeout(timer);
+    }
+  }, [loading, lessonContent, selectedModule, shouldRestoreScroll, learningProgress]);
 
   const handleCloseModule = () => {
       setSelectedModule(null);
       setLessonContent(null);
-  }
+      setExtractedTopics(null);
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+  };
+
+  const handleCompleteLesson = () => {
+    if (selectedModule) {
+      onUpdateProgress(selectedModule.id, 100);
+      handleCloseModule();
+    }
+  };
+
+  const handleScroll = () => {
+      if (!contentRef.current || !selectedModule) return;
+      
+      const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
+      const maxScroll = scrollHeight - clientHeight;
+      
+      if (maxScroll <= 0) return;
+      
+      // Calculate percentage (0-100)
+      // Cap at 98% via scrolling so 100% is reserved for the manual button click
+      const percentage = Math.min(98, Math.floor((scrollTop / maxScroll) * 100));
+      
+      const currentSaved = learningProgress[selectedModule.id] || 0;
+
+      // Update only if we are further down than before, and not yet completed
+      // This implements "Max Progress" tracking so scrolling up doesn't lose progress
+      if (currentSaved < 100 && percentage > currentSaved) {
+          // Debounce updates to avoid spamming state/storage
+          if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+          
+          scrollTimeoutRef.current = setTimeout(() => {
+             onUpdateProgress(selectedModule.id, percentage);
+          }, 500);
+      }
+  };
 
   // Lesson Viewer Modal
   if (selectedModule) {
+      const progress = learningProgress[selectedModule.id] || 0;
+      const isCompleted = progress === 100;
+
       return (
-          <div className="fixed inset-0 z-50 bg-white flex flex-col">
-              <div className="bg-secondary-900 text-white p-4 flex justify-between items-center shadow-md">
-                  <div className="flex items-center space-x-3">
-                      <BookOpen className="w-6 h-6 text-primary-500" />
-                      <div>
-                          <h2 className="font-bold text-lg">{selectedModule}</h2>
-                          <p className="text-xs text-gray-400">Guia de Estudo Gerado por IA</p>
+          <div className="fixed inset-0 z-50 bg-white flex flex-col animate-fade-in">
+              {/* Modal Header */}
+              <div className="bg-secondary-900 text-white p-4 flex justify-between items-center shadow-md flex-shrink-0 z-10">
+                  <div className="flex items-center space-x-3 overflow-hidden">
+                      <BookOpen className="w-6 h-6 text-primary-500 flex-shrink-0" />
+                      <div className="overflow-hidden">
+                          <h2 className="font-bold text-lg truncate">{selectedModule.title}</h2>
+                          <div className="flex items-center space-x-2 text-xs text-gray-400">
+                              <span>Guia de Estudo IA</span>
+                              {!loading && progress > 0 && progress < 100 && (
+                                  <>
+                                    <span className="mx-1">•</span>
+                                    <span className="text-green-400 font-medium">Continuando de {progress}%</span>
+                                  </>
+                              )}
+                          </div>
                       </div>
                   </div>
-                  <button onClick={handleCloseModule} className="p-2 hover:bg-gray-800 rounded-full transition-colors">
-                      <X className="w-6 h-6" />
-                  </button>
+                  <div className="flex items-center space-x-1 ml-2 flex-shrink-0">
+                    {isCompleted && (
+                        <button 
+                            onClick={(e) => { 
+                                e.stopPropagation();
+                                onUpdateProgress(selectedModule.id, 0);
+                                if (contentRef.current) contentRef.current.scrollTop = 0;
+                            }} 
+                            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors"
+                            title="Reiniciar Progresso"
+                        >
+                            <RotateCcw className="w-5 h-5" />
+                        </button>
+                    )}
+                    <button onClick={handleCloseModule} className="p-2 hover:bg-gray-800 rounded-full transition-colors">
+                        <X className="w-6 h-6" />
+                    </button>
+                  </div>
               </div>
               
-              <div className="flex-1 overflow-y-auto p-8 bg-gray-50 custom-scrollbar">
-                  <div className="max-w-4xl mx-auto bg-white p-8 rounded-2xl shadow-sm min-h-full">
+              {/* Modal Content Area */}
+              <div 
+                className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 custom-scrollbar scroll-smooth" 
+                ref={contentRef}
+                onScroll={handleScroll}
+              >
+                  <div className="max-w-4xl mx-auto bg-white p-6 md:p-10 rounded-2xl shadow-sm min-h-full mb-20 transition-all">
                       {loading ? (
-                          <div className="flex flex-col items-center justify-center py-20">
-                              <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-4"></div>
-                              <p className="text-gray-500 animate-pulse">O ElectroBot está escrevendo sua aula sobre {selectedModule}...</p>
-                          </div>
+                          <SkeletonLoader />
                       ) : (
-                          <div className="prose prose-slate max-w-none">
-                              {/* Simple Markdown Rendering */}
+                          <div className="prose prose-slate max-w-none text-gray-800 animate-fade-in-up">
                               {lessonContent?.split('\n').map((line, idx) => {
-                                  if (line.startsWith('# ')) return <h1 key={idx} className="text-3xl font-bold text-gray-900 mb-6 pb-2 border-b">{line.replace('# ', '')}</h1>;
-                                  if (line.startsWith('## ')) return <h2 key={idx} className="text-2xl font-bold text-gray-800 mt-8 mb-4">{line.replace('## ', '')}</h2>;
-                                  if (line.startsWith('### ')) return <h3 key={idx} className="text-xl font-bold text-gray-800 mt-6 mb-3">{line.replace('### ', '')}</h3>;
-                                  if (line.trim() === '') return <br key={idx} />;
-                                  return <p key={idx} className="text-gray-700 leading-relaxed mb-2">{line}</p>;
+                                  if (line.trim().startsWith('# ')) {
+                                      return <h1 key={idx} className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-6 pb-4 border-b border-gray-100">{line.replace(/^#\s+/, '')}</h1>;
+                                  }
+                                  return null; // Render title first
+                              })}
+
+                              {/* Topics Covered Section */}
+                              {loadingTopics && (
+                                <div className="my-8 p-6 bg-gray-50 rounded-lg animate-pulse">
+                                  <div className="h-5 w-1/3 bg-gray-200 rounded mb-4"></div>
+                                  <div className="space-y-2">
+                                    <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
+                                    <div className="h-4 w-2/3 bg-gray-200 rounded"></div>
+                                    <div className="h-4 w-4/5 bg-gray-200 rounded"></div>
+                                  </div>
+                                </div>
+                              )}
+                              {!loadingTopics && extractedTopics && (
+                                <div className="my-8 p-6 bg-primary-50 border-l-4 border-primary-500 rounded-r-lg">
+                                    <h3 className="text-lg font-bold text-primary-800 mb-3 flex items-center">
+                                      <ListChecks className="w-5 h-5 mr-2" />
+                                      Tópicos Abordados
+                                    </h3>
+                                    <div className="text-primary-900/80 space-y-1 whitespace-pre-wrap text-sm leading-relaxed">
+                                        {extractedTopics}
+                                    </div>
+                                </div>
+                              )}
+
+                              {lessonContent?.split('\n').map((line, idx) => {
+                                  const trimmed = line.trim();
+                                  
+                                  // Skip title, it's rendered above
+                                  if (trimmed.startsWith('# ')) return null;
+
+                                  // Spacer for empty lines
+                                  if (!trimmed) return <br key={idx} className="block h-2 content-['']" />;
+                                  
+                                  // Headers
+                                  if (trimmed.startsWith('## ')) {
+                                      return <h2 key={idx} className="text-2xl font-bold text-primary-700 mt-8 mb-4 flex items-center"><span className="w-2 h-8 bg-primary-500 mr-3 rounded-full"></span>{trimmed.replace(/^##\s+/, '')}</h2>;
+                                  }
+                                  if (trimmed.startsWith('### ')) {
+                                      return <h3 key={idx} className="text-xl font-bold text-gray-800 mt-6 mb-3">{trimmed.replace(/^###\s+/, '')}</h3>;
+                                  }
+                                  
+                                  // List items
+                                  if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+                                      return (
+                                        <div key={idx} className="flex items-start mb-2 ml-4">
+                                            <span className="mr-2 text-primary-500 font-bold min-w-[10px]">•</span>
+                                            <p className="leading-relaxed">{trimmed.replace(/^[-*]\s+/, '')}</p>
+                                        </div>
+                                      );
+                                  }
+                                  
+                                  // Standard Paragraph - Render directly to preserve Unicode symbols
+                                  return <p key={idx} className="text-base md:text-lg leading-relaxed text-gray-700 text-justify">{line}</p>;
                               })}
                           </div>
                       )}
                   </div>
               </div>
+
+              {/* Footer Action */}
+              {!loading && (
+                <div className="absolute bottom-0 left-0 w-full p-4 bg-white border-t border-gray-200 flex justify-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                    <button 
+                        onClick={handleCompleteLesson}
+                        className={`
+                            px-8 py-3 rounded-xl font-bold flex items-center space-x-2 transition-all transform hover:-translate-y-1 shadow-lg
+                            ${isCompleted 
+                                ? 'bg-green-100 text-green-700 border border-green-200' 
+                                : 'bg-primary-600 hover:bg-primary-700 text-white hover:shadow-primary-500/30'}
+                        `}
+                    >
+                        {isCompleted ? (
+                            <>
+                                <CheckCircle className="w-5 h-5" />
+                                <span>Aula Concluída</span>
+                            </>
+                        ) : (
+                            <>
+                                <CheckSquare className="w-5 h-5" />
+                                <span>Concluir Aula</span>
+                            </>
+                        )}
+                    </button>
+                </div>
+              )}
           </div>
       );
   }
@@ -93,24 +355,39 @@ const LearningMode: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {filteredModules.map((module) => {
+          const progress = learningProgress[module.id] || 0;
+          const isCompleted = progress === 100;
+
           return (
-            <div key={module.id} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer" onClick={() => handleOpenModule(module.title)}>
+            <div 
+                key={module.id} 
+                className={`bg-white rounded-2xl p-6 border shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer ${isCompleted ? 'border-green-200 bg-green-50/30' : 'border-gray-100'}`} 
+                onClick={() => handleOpenModule(module)}
+            >
               <div className="flex justify-between items-start mb-4">
-                <div>
+                <div className="flex-1 mr-4">
                   <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-1 group-hover:text-primary-600 transition-colors" title={module.title}>{module.title}</h3>
                   <p className="text-gray-500 text-sm line-clamp-2">{module.description}</p>
                 </div>
-                <div className={`p-3 rounded-full flex-shrink-0 ml-4 bg-blue-50 group-hover:bg-primary-50 transition-colors`}>
-                    <PlayCircle className="w-6 h-6 text-primary-600" />
+                <div className={`p-3 rounded-full flex-shrink-0 transition-colors ${isCompleted ? 'bg-green-100' : 'bg-blue-50 group-hover:bg-primary-50'}`}>
+                    {isCompleted ? (
+                         <CheckCircle className="w-6 h-6 text-green-600" />
+                    ) : (
+                         <PlayCircle className="w-6 h-6 text-primary-600" />
+                    )}
                 </div>
               </div>
 
-              {/* Progress Bar (Visual only for now) */}
+              {/* Progress Bar */}
               <div className="mb-4">
+                <div className="flex justify-between text-xs font-semibold mb-1">
+                    <span className={isCompleted ? 'text-green-600' : 'text-gray-400'}>{isCompleted ? 'Concluído' : 'Progresso'}</span>
+                    <span className={isCompleted ? 'text-green-600' : 'text-gray-600'}>{progress}%</span>
+                </div>
                 <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div 
-                    className={`h-full rounded-full bg-gray-300`}
-                    style={{ width: `0%` }}
+                    className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-green-500' : 'bg-primary-500'}`}
+                    style={{ width: `${progress}%` }}
                   ></div>
                 </div>
               </div>
@@ -118,10 +395,10 @@ const LearningMode: React.FC = () => {
               <div className="flex items-center justify-between pt-4 border-t border-gray-50">
                 <div className="flex items-center text-gray-400 text-sm">
                   <Clock className="w-4 h-4 mr-1" />
-                  <span>Leitura ~10 min</span>
+                  <span>Leitura ~15 min</span>
                 </div>
-                <button className="text-sm font-bold text-primary-600 group-hover:text-primary-700 flex items-center">
-                  Acessar Conteúdo 
+                <button className={`text-sm font-bold flex items-center ${isCompleted ? 'text-green-600' : 'text-primary-600 group-hover:text-primary-700'}`}>
+                  {isCompleted ? 'Revisar Conteúdo' : 'Acessar Conteúdo'}
                   <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>

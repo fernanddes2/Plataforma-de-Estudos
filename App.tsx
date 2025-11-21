@@ -16,7 +16,7 @@ const App: React.FC = () => {
   const [isExamMode, setIsExamMode] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // Local Storage Stats
+  // Local Storage Stats (Dashboard)
   const [stats, setStats] = useState(() => {
       try {
         const saved = localStorage.getItem('electroMindStats');
@@ -26,9 +26,24 @@ const App: React.FC = () => {
       }
   });
 
+  // Local Storage Learning Progress
+  // Format: { "lm-0": 100, "lm-5": 50 }
+  const [learningProgress, setLearningProgress] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem('electroMindLearning');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
   useEffect(() => {
       localStorage.setItem('electroMindStats', JSON.stringify(stats));
   }, [stats]);
+
+  useEffect(() => {
+      localStorage.setItem('electroMindLearning', JSON.stringify(learningProgress));
+  }, [learningProgress]);
 
   const handleUpdateStats = (isCorrect: boolean) => {
     setStats((prev: any) => {
@@ -45,6 +60,13 @@ const App: React.FC = () => {
             streakDays: prev.streakDays 
         };
     });
+  };
+
+  const handleUpdateLearningProgress = (moduleId: string, progress: number) => {
+    setLearningProgress(prev => ({
+      ...prev,
+      [moduleId]: progress
+    }));
   };
 
   const handleNavigate = (view: ViewState) => {
@@ -81,7 +103,12 @@ const App: React.FC = () => {
       case ViewState.QUESTION_BANK:
         return <QuestionBank onStartQuiz={handleStartQuiz} />;
       case ViewState.LEARNING:
-        return <LearningMode />;
+        return (
+          <LearningMode 
+            learningProgress={learningProgress}
+            onUpdateProgress={handleUpdateLearningProgress}
+          />
+        );
       case ViewState.EXAMS:
         return <ExamArchive onStartExam={handleStartExam} />;
       case ViewState.AI_TUTOR:
