@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Question } from '../types';
 import { CheckCircle, XCircle, ArrowRight, AlertCircle, Sparkles, ChevronRight, RefreshCw, Home, Trophy } from 'lucide-react';
 import { explainQuestion, generateQuizForTopic } from '../services/geminiService';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface QuestionModeProps {
   initialQuestions?: Question[]; 
@@ -277,9 +278,9 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
                                 {isCorrect ? 'Correto!' : 'Incorreto'}
                             </h3>
                         </div>
-                        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                            {currentQuestion.explanation}
-                        </p>
+                        <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                            <MarkdownRenderer content={currentQuestion.explanation} />
+                        </div>
                     </div>
 
                     {/* AI Explanation Section */}
@@ -316,7 +317,7 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
 
                         {aiExplanation && (
                             <div className="text-sm text-gray-200 space-y-2 max-h-64 overflow-y-auto custom-scrollbar leading-relaxed">
-                                <div className="whitespace-pre-wrap">{aiExplanation}</div>
+                                <MarkdownRenderer content={aiExplanation} />
                             </div>
                         )}
                     </div>

@@ -9,11 +9,28 @@ const API_KEY = process.env.API_KEY || '';
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 const SYSTEM_INSTRUCTION = `
-Você é o ElectroBot, um tutor especialista em Engenharia Elétrica avançada.
-Seja didático, preciso e use terminologia técnica correta (ABNT/IEEE).
-Responda sempre em Português (Brasil).
-IMPORTANTE: Ao escrever fórmulas matemáticas, use SEMPRE símbolos Unicode (ex: Ω, μF, π, ∫, ∑, ∆, θ, ∠, √) em vez de código LaTeX ou Markdown complexo, para garantir que o texto seja legível em qualquer interface simples. 
-Exemplo: Em vez de \`\\frac{V}{R}\`, escreva "V / R". Em vez de \`\\omega\`, escreva "ω".
+Você é o ElectroBot, um tutor especialista em Engenharia Elétrica de nível universitário avançado. Sua missão é fornecer explicações precisas, didáticas e tecnicamente rigorosas.
+
+**REGRAS DE FORMATAÇÃO CRÍTICAS:**
+1.  **MATEMÁTICA E FÓRMULAS:** Use **SEMPRE** a sintaxe LaTeX.
+    *   Para equações em bloco (display), use \`$$ ... $$\`. Exemplo: \`$$V = R \cdot I$$\`
+    *   Para matemática inline, use \`$ ... $\`. Exemplo: A impedância é dada por \`$Z = R + jX$\`.
+    *   Use \`$j$\` para a unidade imaginária, não \`$i$\`.
+    *   Use unidades do SI (V, A, H, F, Ω, W, etc.).
+2.  **RACIOCÍNIO (CHAIN-OF-THOUGHT):** Ao resolver problemas, mostre seu trabalho passo a passo de forma explícita.
+    *   **Exemplo para Circuitos:** "1. Identificar as malhas. 2. Aplicar a Lei de Kirchhoff das Tensões (LKT) para cada malha. 3. Montar o sistema de equações lineares. 4. Resolver a matriz para encontrar as correntes."
+    *   **Verificação:** Ao final, comente brevemente se a resposta é fisicamente plausível (ex: resistências passivas não podem ser negativas).
+3.  **CÓDIGO DE SIMULAÇÃO:** Quando apropriado ou solicitado, forneça snippets de código para simulação em **MATLAB**, **Python (com NumPy/SciPy)** ou **netlists SPICE (LTspice)**. Envolva o código em blocos de Markdown (\`\`\`language ... \`\`\`).
+4.  **IDIOMA:** Responda sempre em Português (Brasil).
+
+**ÁREAS DE ESPECIALIZAÇÃO (ABRANGÊNCIA):**
+Sua expertise deve cobrir tópicos complexos, incluindo:
+-   **Circuitos Elétricos:** Análise de regime permanente e transitório, domínio do tempo e da frequência (Fasores, Transformada de Laplace).
+-   **Eletrônica:** Modelos de diodos e transistores (pequenos e grandes sinais), amplificadores operacionais.
+-   **Sinais e Sistemas:** Convolução, Transformadas de Fourier e Laplace.
+-   **Eletromagnetismo:** Leis de Gauss, Ampère, Faraday e as Equações de Maxwell.
+-   **Sistemas de Potência:** Fluxo de potência, componentes simétricos, faltas.
+-   **Sistemas de Controle:** Análise de estabilidade, lugar das raízes, diagramas de Bode.
 `;
 
 // Helper to clean JSON strings from AI (removes markdown code blocks)
@@ -43,14 +60,19 @@ export const createChatSession = (): Chat => {
     model: 'gemini-2.5-flash',
     config: {
       systemInstruction: SYSTEM_INSTRUCTION,
-      temperature: 0.7,
+      temperature: 0.5, // Slightly lower temp for more factual responses
     },
   });
 };
 
-export const sendMessageToGemini = async (chat: Chat, message: string): Promise<string> => {
+export const sendMessageToGemini = async (chat: Chat, message: string, mode: 'resolver' | 'socratic'): Promise<string> => {
+  let finalMessage = message;
+  if (mode === 'socratic') {
+    finalMessage = `MODO SOCRÁTICO ATIVO: Não me dê a resposta final. Em vez disso, guie-me com perguntas e dicas para que eu chegue à solução. Meu pedido é: "${message}"`;
+  }
+  
   try {
-    const response: GenerateContentResponse = await chat.sendMessage({ message });
+    const response: GenerateContentResponse = await chat.sendMessage({ message: finalMessage });
     return response.text || "Desculpe, não consegui processar sua resposta.";
   } catch (error) {
     console.error("Error sending message:", error);
@@ -63,6 +85,7 @@ export const generateQuizForTopic = async (topic: string, count: number = 5, isE
     const prompt = `
       Gere um array JSON com ${count} questões de múltipla escolha sobre "${topic}".
       Nível de dificuldade: ${difficulty}.
+      Para qualquer fórmula no campo "text" ou "explanation", use notação de texto simples e legível (ex: V = R * I) ou Unicode (Ω, μF), pois o JSON não suporta LaTeX.
       
       O formato do JSON deve ser estritamente:
       [
@@ -70,10 +93,10 @@ export const generateQuizForTopic = async (topic: string, count: number = 5, isE
           "id": "unique_id",
           "topic": "${topic}",
           "difficulty": "Fácil" | "Médio" | "Difícil",
-          "text": "Enunciado da questão... (Use Unicode para símbolos: Ω, μ, etc)",
+          "text": "Enunciado da questão...",
           "options": ["Opção A", "Opção B", "Opção C", "Opção D"],
           "correctAnswerIndex": 0,
-          "explanation": "Explicação detalhada do porquê a resposta está correta."
+          "explanation": "Explicação detalhada."
         }
       ]
       NÃO use markdown no JSON. Apenas o JSON puro.
@@ -85,7 +108,6 @@ export const generateQuizForTopic = async (topic: string, count: number = 5, isE
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
-                // Fix: Added responseSchema to ensure structured JSON output.
                 responseSchema: {
                   type: Type.ARRAY,
                   items: {
@@ -134,7 +156,6 @@ export const generateQuizForTopic = async (topic: string, count: number = 5, isE
         const text = response.text || "[]";
         const questions = cleanAndParseJSON(text);
         
-        // Add unique IDs just in case
         if (Array.isArray(questions)) {
              return questions.map((q: any, idx: number) => ({
                 ...q,
@@ -157,7 +178,7 @@ export const explainQuestion = async (question: string, options: string[], corre
       Opções: ${options.join(', ')}
       Correta: ${correctOption}
 
-      Dê o passo a passo da resolução. Use símbolos Unicode (Ω, π, √, etc) para as fórmulas, NÃO use LaTeX ou blocos de código.
+      **Siga TODAS as regras de formatação do sistema:** Use LaTeX para equações, mostre o raciocínio passo a passo e verifique a plausibilidade da resposta.
     `;
 
     try {
@@ -178,25 +199,18 @@ export const generateLessonContent = async (topic: string): Promise<string> => {
     const prompt = `
         Crie uma aula completa, rica e estruturada sobre "${topic}" para um estudante de Engenharia Elétrica.
         
-        Diretrizes de Formatação:
-        1. Use Markdown para títulos (#, ##, ###) e listas (-).
-        2. NÃO use blocos de código para texto normal.
-        3. CRÍTICO: Use símbolos UNICODE para todas as equações matemáticas e unidades. 
-           - Exemplo correto: V(t) = Vmax · sin(ωt + θ)
-           - Exemplo correto: R = 10 kΩ, C = 47 μF
-           - NÃO use LaTeX (ex: \\omega, \\frac{}{}).
-           - Se precisar de integral, use ∫. Se precisar de somatório, use ∑.
-        
-        Estrutura da Aula:
+        **Estrutura da Aula:**
         # ${topic}
-        ## Introdução e Definições
-        ## Princípios de Funcionamento
-        ## Modelagem Matemática (Fórmulas essenciais usando Unicode)
-        ## Aplicações Práticas na Indústria
-        ## Exemplo Numérico Resolvido (Passo a passo)
-        ## Conclusão e Tendências
+        ## 1. Introdução e Definições Fundamentais
+        ## 2. Princípios de Funcionamento
+        ## 3. Modelagem Matemática (Fórmulas essenciais)
+        ## 4. Aplicações Práticas na Indústria
+        ## 5. Exemplo Numérico Resolvido (Passo a passo)
+        ## 6. Simulação (Opcional: MATLAB, Python ou SPICE)
+        ## 7. Conclusão e Tendências Futuras
 
         Seja aprofundado, técnico, mas claro.
+        **Lembre-se: Siga TODAS as regras de formatação do sistema (LaTeX, passo a passo, etc.).**
     `;
 
     try {

@@ -3,6 +3,7 @@ import { MOCK_LEARNING_MODULES } from '../constants';
 import { PlayCircle, CheckCircle, Clock, ArrowRight, Search, BookOpen, X, CheckSquare, Sparkles, RotateCcw, ListChecks } from 'lucide-react';
 import { generateLessonContent, extractTopicsFromLesson } from '../services/geminiService';
 import { LearningModule } from '../types';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface LearningModeProps {
   learningProgress: Record<string, number>;
@@ -218,14 +219,7 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
                       {loading ? (
                           <SkeletonLoader />
                       ) : (
-                          <div className="prose prose-slate dark:prose-invert max-w-none text-gray-800 dark:text-slate-200 animate-fade-in-up">
-                              {lessonContent?.split('\n').map((line, idx) => {
-                                  if (line.trim().startsWith('# ')) {
-                                      return <h1 key={idx} className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white mb-6 pb-4 border-b border-gray-100 dark:border-slate-700">{line.replace(/^#\s+/, '')}</h1>;
-                                  }
-                                  return null;
-                              })}
-
+                          <div className="animate-fade-in-up">
                               {/* Topics Covered Section */}
                               {loadingTopics && (
                                 <div className="my-8 p-6 bg-gray-50 dark:bg-slate-700 rounded-lg animate-pulse">
@@ -248,30 +242,8 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
                                     </div>
                                 </div>
                               )}
-
-                              {lessonContent?.split('\n').map((line, idx) => {
-                                  const trimmed = line.trim();
-                                  if (trimmed.startsWith('# ')) return null;
-                                  if (!trimmed) return <br key={idx} className="block h-2 content-['']" />;
-                                  
-                                  if (trimmed.startsWith('## ')) {
-                                      return <h2 key={idx} className="text-2xl font-bold text-primary-700 dark:text-primary-400 mt-8 mb-4 flex items-center"><span className="w-2 h-8 bg-primary-500 mr-3 rounded-full"></span>{trimmed.replace(/^##\s+/, '')}</h2>;
-                                  }
-                                  if (trimmed.startsWith('### ')) {
-                                      return <h3 key={idx} className="text-xl font-bold text-gray-800 dark:text-slate-200 mt-6 mb-3">{trimmed.replace(/^###\s+/, '')}</h3>;
-                                  }
-                                  
-                                  if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-                                      return (
-                                        <div key={idx} className="flex items-start mb-2 ml-4">
-                                            <span className="mr-2 text-primary-500 dark:text-primary-400 font-bold min-w-[10px]">•</span>
-                                            <p className="leading-relaxed text-gray-700 dark:text-slate-300">{trimmed.replace(/^[-*]\s+/, '')}</p>
-                                        </div>
-                                      );
-                                  }
-                                  
-                                  return <p key={idx} className="text-base md:text-lg leading-relaxed text-gray-700 dark:text-slate-300 text-justify">{line}</p>;
-                              })}
+                              
+                              {lessonContent && <MarkdownRenderer content={lessonContent} />}
                           </div>
                       )}
                   </div>
