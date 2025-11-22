@@ -17,10 +17,10 @@ const ExamArchive: React.FC<ExamArchiveProps> = ({ onStartExam }) => {
   });
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-8 2xl:p-12 max-w-screen-2xl 2xl:max-w-[1800px] mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Provas Anteriores</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">Simulados baseados no estilo da UFF e Estácio de Sá gerados por IA.</p>
+        <h1 className="text-3xl 2xl:text-4xl font-bold text-gray-900 dark:text-white">Provas Anteriores</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-2 2xl:text-lg">Simulados baseados no estilo da UFF e Estácio de Sá gerados por IA.</p>
       </div>
 
       {/* Filters */}
@@ -61,9 +61,9 @@ const ExamArchive: React.FC<ExamArchiveProps> = ({ onStartExam }) => {
       </div>
 
       {/* Exam Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 2xl:gap-6">
         {filteredExams.map((exam) => (
-          <div key={exam.id} className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all duration-200 group">
+          <div key={exam.id} className="bg-white dark:bg-slate-800 rounded-xl p-5 2xl:p-6 border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all duration-200 group">
             <div className="flex justify-between items-start mb-3">
               <div className={`p-2 rounded-lg ${exam.university === 'UFF' ? 'bg-blue-50 dark:bg-blue-900/30' : 'bg-green-50 dark:bg-green-900/30'}`}>
                 <Building className={`w-5 h-5 ${exam.university === 'UFF' ? 'text-blue-700 dark:text-blue-400' : 'text-green-700 dark:text-green-400'}`} />
@@ -73,7 +73,7 @@ const ExamArchive: React.FC<ExamArchiveProps> = ({ onStartExam }) => {
               </span>
             </div>
 
-            <h3 className="text-base font-bold text-gray-900 dark:text-white leading-tight mb-1">
+            <h3 className="text-base 2xl:text-lg font-bold text-gray-900 dark:text-white leading-tight mb-1">
               {exam.subject}
             </h3>
             <p className={`text-xs font-bold mb-4 ${exam.university === 'UFF' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'}`}>
@@ -82,7 +82,7 @@ const ExamArchive: React.FC<ExamArchiveProps> = ({ onStartExam }) => {
 
             <button 
                 onClick={() => onStartExam(exam.subject, exam.university)}
-                className="w-full mt-auto flex items-center justify-center space-x-2 py-2.5 bg-secondary-900 dark:bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-black dark:hover:bg-primary-700 transition-colors shadow-sm"
+                className="w-full mt-auto flex items-center justify-center space-x-2 py-2.5 2xl:py-3.5 bg-secondary-900 dark:bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-black dark:hover:bg-primary-700 transition-colors shadow-sm"
             >
               <Play className="w-4 h-4" />
               <span>Iniciar Simulado</span>

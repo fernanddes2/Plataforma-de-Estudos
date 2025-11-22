@@ -215,7 +215,7 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
                 ref={contentRef}
                 onScroll={handleScroll}
               >
-                  <div className="max-w-4xl mx-auto bg-white dark:bg-slate-800 p-6 md:p-10 rounded-2xl shadow-sm min-h-full mb-20 transition-all dark:border dark:border-slate-700">
+                  <div className="max-w-5xl mx-auto bg-white dark:bg-slate-800 p-6 md:p-10 2xl:p-14 rounded-2xl shadow-sm min-h-full mb-20 transition-all dark:border dark:border-slate-700">
                       {loading ? (
                           <SkeletonLoader />
                       ) : (
@@ -280,10 +280,10 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-8 2xl:p-12 max-w-screen-2xl 2xl:max-w-[1800px] mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Conteúdos e Aulas</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">Guias de estudo gerados por IA para todas as disciplinas de Engenharia Elétrica.</p>
+        <h1 className="text-3xl 2xl:text-4xl font-bold text-gray-900 dark:text-white">Conteúdos e Aulas</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-2 2xl:text-lg">Guias de estudo gerados por IA para todas as disciplinas de Engenharia Elétrica.</p>
 
         {/* Search Bar */}
         <div className="mt-6 relative max-w-xl">
@@ -300,7 +300,7 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6 2xl:gap-8">
         {filteredModules.map((module) => {
           const progress = learningProgress[module.id] || 0;
           const isCompleted = progress === 100;
@@ -308,26 +308,26 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
           return (
             <div 
                 key={module.id} 
-                className={`bg-white dark:bg-slate-800 rounded-2xl p-6 border shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer ${isCompleted ? 'border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-900/10' : 'border-gray-100 dark:border-slate-700'}`} 
+                className={`bg-white dark:bg-slate-800 rounded-2xl p-6 2xl:p-8 border shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer ${isCompleted ? 'border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-900/10' : 'border-gray-100 dark:border-slate-700'}`} 
                 onClick={() => handleOpenModule(module)}
             >
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1 mr-4">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1 line-clamp-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" title={module.title}>{module.title}</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm line-clamp-2">{module.description}</p>
+                  <h3 className="text-xl 2xl:text-2xl font-bold text-gray-900 dark:text-white mb-1 line-clamp-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" title={module.title}>{module.title}</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm 2xl:text-base line-clamp-2">{module.description}</p>
                 </div>
                 <div className={`p-3 rounded-full flex-shrink-0 transition-colors ${isCompleted ? 'bg-green-100 dark:bg-green-900/30' : 'bg-blue-50 dark:bg-blue-900/20 group-hover:bg-primary-50 dark:group-hover:bg-primary-900/30'}`}>
                     {isCompleted ? (
-                         <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+                         <CheckCircle className="w-6 h-6 2xl:w-8 2xl:h-8 text-green-600 dark:text-green-400" />
                     ) : (
-                         <PlayCircle className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+                         <PlayCircle className="w-6 h-6 2xl:w-8 2xl:h-8 text-primary-600 dark:text-primary-400" />
                     )}
                 </div>
               </div>
 
               {/* Progress Bar */}
               <div className="mb-4">
-                <div className="flex justify-between text-xs font-semibold mb-1">
+                <div className="flex justify-between text-xs 2xl:text-sm font-semibold mb-1">
                     <span className={isCompleted ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}>{isCompleted ? 'Concluído' : 'Progresso'}</span>
                     <span className={isCompleted ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-300'}>{progress}%</span>
                 </div>
@@ -340,11 +340,11 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
               </div>
 
               <div className="flex items-center justify-between pt-4 border-t border-gray-50 dark:border-slate-700">
-                <div className="flex items-center text-gray-400 text-sm">
+                <div className="flex items-center text-gray-400 text-sm 2xl:text-base">
                   <Clock className="w-4 h-4 mr-1" />
                   <span>Leitura ~15 min</span>
                 </div>
-                <button className={`text-sm font-bold flex items-center ${isCompleted ? 'text-green-600 dark:text-green-400' : 'text-primary-600 dark:text-primary-400 group-hover:text-primary-700 dark:group-hover:text-primary-300'}`}>
+                <button className={`text-sm 2xl:text-base font-bold flex items-center ${isCompleted ? 'text-green-600 dark:text-green-400' : 'text-primary-600 dark:text-primary-400 group-hover:text-primary-700 dark:group-hover:text-primary-300'}`}>
                   {isCompleted ? 'Revisar Conteúdo' : 'Acessar Conteúdo'}
                   <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                 </button>

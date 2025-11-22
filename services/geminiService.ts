@@ -1,4 +1,3 @@
-// Fix: Removed unused Schema from import.
 import { GoogleGenAI, Chat, GenerateContentResponse, Type } from "@google/genai";
 import { Question } from "../types";
 
@@ -9,28 +8,33 @@ const API_KEY = process.env.API_KEY || '';
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 const SYSTEM_INSTRUCTION = `
-Você é o ElectroBot, um tutor especialista em Engenharia Elétrica de nível universitário avançado. Sua missão é fornecer explicações precisas, didáticas e tecnicamente rigorosas.
+Você é o ElectroBot, um tutor especialista em Engenharia Elétrica de nível universitário avançado.
 
-**REGRAS DE FORMATAÇÃO CRÍTICAS:**
-1.  **MATEMÁTICA E FÓRMULAS:** Use **SEMPRE** a sintaxe LaTeX.
-    *   Para equações em bloco (display), use \`$$ ... $$\`. Exemplo: \`$$V = R \cdot I$$\`
-    *   Para matemática inline, use \`$ ... $\`. Exemplo: A impedância é dada por \`$Z = R + jX$\`.
-    *   Use \`$j$\` para a unidade imaginária, não \`$i$\`.
-    *   Use unidades do SI (V, A, H, F, Ω, W, etc.).
-2.  **RACIOCÍNIO (CHAIN-OF-THOUGHT):** Ao resolver problemas, mostre seu trabalho passo a passo de forma explícita.
-    *   **Exemplo para Circuitos:** "1. Identificar as malhas. 2. Aplicar a Lei de Kirchhoff das Tensões (LKT) para cada malha. 3. Montar o sistema de equações lineares. 4. Resolver a matriz para encontrar as correntes."
-    *   **Verificação:** Ao final, comente brevemente se a resposta é fisicamente plausível (ex: resistências passivas não podem ser negativas).
-3.  **CÓDIGO DE SIMULAÇÃO:** Quando apropriado ou solicitado, forneça snippets de código para simulação em **MATLAB**, **Python (com NumPy/SciPy)** ou **netlists SPICE (LTspice)**. Envolva o código em blocos de Markdown (\`\`\`language ... \`\`\`).
-4.  **IDIOMA:** Responda sempre em Português (Brasil).
+**ESTRUTURA DE RESPOSTA OBRIGATÓRIA (NÍVEIS DE PROFUNDIDADE):**
+Para explicações teóricas ou resolução de problemas, siga esta ordem:
+1.  **Resumo Intuitivo (Conceitual):** Explique o "o quê" e o "como" sem matemática pesada, usando analogias simples.
+2.  **Diagrama Visual (Se aplicável):** Gere um diagrama Mermaid ou SVG para ilustrar (veja regras abaixo).
+3.  **Desenvolvimento Matemático Rigoroso:** Use LaTeX, deduções passo a passo e rigor acadêmico.
+4.  **Aplicação no Mundo Real (O "Porquê"):** OBRIGATÓRIO. Explique onde isso é usado na indústria (ex: carros elétricos, redes 5G, painéis solares).
 
-**ÁREAS DE ESPECIALIZAÇÃO (ABRANGÊNCIA):**
-Sua expertise deve cobrir tópicos complexos, incluindo:
--   **Circuitos Elétricos:** Análise de regime permanente e transitório, domínio do tempo e da frequência (Fasores, Transformada de Laplace).
--   **Eletrônica:** Modelos de diodos e transistores (pequenos e grandes sinais), amplificadores operacionais.
--   **Sinais e Sistemas:** Convolução, Transformadas de Fourier e Laplace.
--   **Eletromagnetismo:** Leis de Gauss, Ampère, Faraday e as Equações de Maxwell.
--   **Sistemas de Potência:** Fluxo de potência, componentes simétricos, faltas.
--   **Sistemas de Controle:** Análise de estabilidade, lugar das raízes, diagramas de Bode.
+**REGRAS DE FORMATAÇÃO E INTELIGÊNCIA:**
+
+1.  **MATEMÁTICA (LATEX):**
+    *   Use \`$$ ... $$\` para equações em bloco e \`$ ... $\` para inline.
+    *   Use \`j\` para imaginários.
+
+2.  **VISUALIZAÇÃO (SVG & MERMAID):**
+    *   **Diagramas de Blocos/Fluxos:** Use blocos de código \`\`\`mermaid\`. IMPORTANTE: Sempre coloque os rótulos de texto entre aspas duplas para evitar erros de sintaxe com parênteses ou caracteres especiais. Ex: \`A["Texto (com) detalhe"]\`.
+    *   **Circuitos e Gráficos Vetoriais:** Use blocos de código \`\`\`svg\`. Gere código SVG limpo e responsivo para desenhar circuitos simples (resistores, fontes), fasores ou formas de onda. Mantenha o SVG simples e use cores contrastantes (stroke="currentColor" ou preto/branco).
+
+3.  **AUTO-CORREÇÃO E PENSAMENTO CRÍTICO:**
+    *   **Análise Dimensional:** Antes de dar uma resposta numérica, verifique mentalmente se as unidades batem. Se o aluno pedir corrente e sua conta der Volts, pare e corrija.
+    *   **Plausibilidade:** Se uma resistência der negativa em um circuito passivo, alerte o erro.
+
+4.  **INTERATIVIDADE (SIMULAÇÃO):**
+    *   Use a sintaxe \`$$INTERACTIVE|Template|Var...$$\` para permitir que o aluno brinque com variáveis.
+
+5.  **IDIOMA:** Português (Brasil).
 `;
 
 // Helper to clean JSON strings from AI (removes markdown code blocks)
@@ -57,10 +61,10 @@ const cleanAndParseJSON = (text: string): any => {
 
 export const createChatSession = (): Chat => {
   return ai.chats.create({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3-pro-preview',
     config: {
       systemInstruction: SYSTEM_INSTRUCTION,
-      temperature: 0.5, // Slightly lower temp for more factual responses
+      temperature: 0.3, // Reduced temperature for more rigorous adherence to structure
     },
   });
 };
@@ -68,7 +72,9 @@ export const createChatSession = (): Chat => {
 export const sendMessageToGemini = async (chat: Chat, message: string, mode: 'resolver' | 'socratic'): Promise<string> => {
   let finalMessage = message;
   if (mode === 'socratic') {
-    finalMessage = `MODO SOCRÁTICO ATIVO: Não me dê a resposta final. Em vez disso, guie-me com perguntas e dicas para que eu chegue à solução. Meu pedido é: "${message}"`;
+    finalMessage = `MODO SOCRÁTICO: O aluno perguntou: "${message}". NÃO dê a resposta completa. Faça perguntas guias. Peça para ele montar a primeira equação. Se ele errar, corrija sutilmente.`;
+  } else {
+    finalMessage = `MODO RESOLVEDOR: O aluno perguntou: "${message}". Forneça a solução completa seguindo a estrutura: Resumo -> Diagrama (se útil) -> Matemática -> Aplicação Real.`;
   }
   
   try {
@@ -85,7 +91,9 @@ export const generateQuizForTopic = async (topic: string, count: number = 5, isE
     const prompt = `
       Gere um array JSON com ${count} questões de múltipla escolha sobre "${topic}".
       Nível de dificuldade: ${difficulty}.
-      Para qualquer fórmula no campo "text" ou "explanation", use notação de texto simples e legível (ex: V = R * I) ou Unicode (Ω, μF), pois o JSON não suporta LaTeX.
+      
+      IMPORTANTE PARA O JSON:
+      Para fórmulas no campo "text" ou "explanation", NÃO use LaTeX complexo pois pode quebrar o JSON. Use notação Unicode legível (ex: Ω, μF, integral ∫) ou texto simples claro (V = R * I).
       
       O formato do JSON deve ser estritamente:
       [
@@ -173,17 +181,21 @@ export const generateQuizForTopic = async (topic: string, count: number = 5, isE
 
 export const explainQuestion = async (question: string, options: string[], correctOption: string): Promise<string> => {
     const prompt = `
-      Explique detalhadamente a questão de Engenharia Elétrica abaixo para um estudante.
+      Explique detalhadamente a questão de Engenharia Elétrica abaixo.
       Questão: "${question}"
       Opções: ${options.join(', ')}
       Correta: ${correctOption}
 
-      **Siga TODAS as regras de formatação do sistema:** Use LaTeX para equações, mostre o raciocínio passo a passo e verifique a plausibilidade da resposta.
+      Siga a estrutura:
+      1. Resumo do Conceito
+      2. Análise Matemática (LaTeX) com verificação dimensional
+      3. Por que a opção correta é a correta e por que as outras estão erradas.
+      4. Aplicação prática desse conceito.
     `;
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3-pro-preview',
             contents: prompt,
             config: {
                 systemInstruction: SYSTEM_INSTRUCTION
@@ -197,25 +209,23 @@ export const explainQuestion = async (question: string, options: string[], corre
 
 export const generateLessonContent = async (topic: string): Promise<string> => {
     const prompt = `
-        Crie uma aula completa, rica e estruturada sobre "${topic}" para um estudante de Engenharia Elétrica.
+        Crie uma aula completa sobre "${topic}" para Engenharia Elétrica.
         
-        **Estrutura da Aula:**
+        **Estrutura Obrigatória:**
         # ${topic}
-        ## 1. Introdução e Definições Fundamentais
-        ## 2. Princípios de Funcionamento
-        ## 3. Modelagem Matemática (Fórmulas essenciais)
-        ## 4. Aplicações Práticas na Indústria
-        ## 5. Exemplo Numérico Resolvido (Passo a passo)
-        ## 6. Simulação (Opcional: MATLAB, Python ou SPICE)
-        ## 7. Conclusão e Tendências Futuras
-
-        Seja aprofundado, técnico, mas claro.
-        **Lembre-se: Siga TODAS as regras de formatação do sistema (LaTeX, passo a passo, etc.).**
+        ## 1. Resumo Executivo (Visão Geral)
+        ## 2. Diagrama de Conceito (Gere um código Mermaid ou SVG aqui representando o sistema)
+        ## 3. Fundamentos Matemáticos (Use LaTeX rigoroso)
+        ## 4. Exemplo Numérico Resolvido (Passo a passo com 'j' para complexos)
+        ## 5. Simulação Interativa (Use $$INTERACTIVE|...$$)
+        ## 6. Aplicação no Mundo Real (Onde isso é usado hoje?)
+        
+        Seja visual e prático.
     `;
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3-pro-preview',
             contents: prompt,
             config: {
                 systemInstruction: SYSTEM_INSTRUCTION

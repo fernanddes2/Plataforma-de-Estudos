@@ -83,7 +83,7 @@ const AIChat: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-5xl mx-auto p-4">
+    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-screen-xl 2xl:max-w-[1600px] mx-auto p-4 2xl:p-6">
         {/* Header */}
         <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl p-4 mb-4 flex items-center justify-between shadow-sm">
             <div className="flex items-center space-x-4">
@@ -124,7 +124,7 @@ const AIChat: React.FC = () => {
                             )}
                         </div>
 
-                        <div className={`p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                        <div className={`p-4 2xl:p-5 rounded-2xl text-sm 2xl:text-base leading-relaxed shadow-sm ${
                             msg.role === 'user' 
                                 ? 'bg-secondary-900 dark:bg-primary-600 text-white rounded-tr-none' 
                                 : 'bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-800 dark:text-gray-200 rounded-tl-none'
@@ -173,7 +173,7 @@ const AIChat: React.FC = () => {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Analisar um circuito RLC em série..."
-                    className="flex-1 max-h-32 min-h-[3rem] p-3 bg-transparent border-none focus:ring-0 resize-none text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
+                    className="flex-1 max-h-32 min-h-[3rem] p-3 bg-transparent border-none focus:ring-0 resize-none text-sm 2xl:text-base text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
                     rows={1}
                 />
                 <button

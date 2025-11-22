@@ -52,10 +52,10 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ onStartQuiz }) => {
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto">
+        <div className="p-8 2xl:p-12 max-w-screen-2xl 2xl:max-w-[1800px] mx-auto">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Banco de Questões</h1>
-                <p className="text-gray-500 dark:text-gray-400 mt-2">Explore nossa biblioteca completa de disciplinas de Engenharia Elétrica.</p>
+                <h1 className="text-3xl 2xl:text-4xl font-bold text-gray-900 dark:text-white">Banco de Questões</h1>
+                <p className="text-gray-500 dark:text-gray-400 mt-2 2xl:text-lg">Explore nossa biblioteca completa de disciplinas de Engenharia Elétrica.</p>
                 
                 {/* Search Bar */}
                 <div className="mt-6 relative max-w-xl">
@@ -76,13 +76,13 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ onStartQuiz }) => {
                 <span>Mostrando {filteredSubjects.length} disciplinas</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 2xl:gap-6">
                 {filteredSubjects.map((subject, idx) => {
                     const style = getSubjectStyle(subject);
                     return (
                         <div 
                             key={idx} 
-                            className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary-300 dark:hover:border-primary-500 transition-all duration-200 group cursor-pointer flex flex-col justify-between h-full" 
+                            className="bg-white dark:bg-slate-800 rounded-xl p-5 2xl:p-6 border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary-300 dark:hover:border-primary-500 transition-all duration-200 group cursor-pointer flex flex-col justify-between h-full" 
                             onClick={() => onStartQuiz(subject)}
                         >
                             <div>
@@ -92,17 +92,17 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ onStartQuiz }) => {
                                     </div>
                                 </div>
                                 
-                                <h3 className="text-base font-bold text-gray-900 dark:text-white leading-tight mb-2 line-clamp-2" title={subject}>
+                                <h3 className="text-base 2xl:text-lg font-bold text-gray-900 dark:text-white leading-tight mb-2 line-clamp-2" title={subject}>
                                     {subject}
                                 </h3>
                             </div>
 
                             <div className="mt-4 pt-4 border-t border-gray-50 dark:border-slate-700 flex items-center justify-between">
-                                <div className="flex items-center text-xs text-gray-400">
+                                <div className="flex items-center text-xs 2xl:text-sm text-gray-400">
                                     <Layers className="w-3 h-3 mr-1" />
                                     <span>Módulos Aulas</span>
                                 </div>
-                                <span className="text-xs font-medium text-primary-600 dark:text-primary-400 group-hover:translate-x-1 transition-transform flex items-center">
+                                <span className="text-xs 2xl:text-sm font-medium text-primary-600 dark:text-primary-400 group-hover:translate-x-1 transition-transform flex items-center">
                                     Praticar <ChevronRight className="w-3 h-3 ml-0.5" />
                                 </span>
                             </div>
