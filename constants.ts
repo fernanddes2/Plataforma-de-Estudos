@@ -61,27 +61,57 @@ export const SUBJECTS_LIST = [
   "Libras e Inclusão"
 ];
 
-// Generate MOCK_EXAMS dynamically for all subjects
+// Lista expandida de Universidades para simulação
+const UNIVERSITIES = [
+    // Militares (Nível Muito Difícil)
+    { name: 'ITA', type: 'Militar', fullName: 'Instituto Tecnológico de Aeronáutica' },
+    { name: 'IME', type: 'Militar', fullName: 'Instituto Militar de Engenharia' },
+    
+    // Públicas SP (Nível Difícil/Teórico)
+    { name: 'USP', type: 'Publica', fullName: 'Universidade de São Paulo (Poli/São Carlos)' },
+    { name: 'UNICAMP', type: 'Publica', fullName: 'Universidade Estadual de Campinas' },
+    { name: 'UNESP', type: 'Publica', fullName: 'Universidade Estadual Paulista' },
+
+    // Públicas Federais (Nível Difícil)
+    { name: 'UFRJ', type: 'Publica', fullName: 'Universidade Federal do Rio de Janeiro' },
+    { name: 'UFF', type: 'Publica', fullName: 'Universidade Federal Fluminense' },
+    { name: 'UFMG', type: 'Publica', fullName: 'Universidade Federal de Minas Gerais' },
+    { name: 'UFRGS', type: 'Publica', fullName: 'Universidade Federal do Rio Grande do Sul' },
+    { name: 'UNB', type: 'Publica', fullName: 'Universidade de Brasília' },
+    { name: 'UTFPR', type: 'Publica', fullName: 'Universidade Tecnológica Federal do Paraná' },
+
+    // Privadas de Referência (Nível Médio/Alto)
+    { name: 'PUC-Rio', type: 'PrivadaRef', fullName: 'Pontifícia Universidade Católica do Rio' },
+    { name: 'Mackenzie', type: 'PrivadaRef', fullName: 'Universidade Presbiteriana Mackenzie' },
+    { name: 'FEI', type: 'PrivadaRef', fullName: 'Centro Universitário FEI' },
+
+    // Privadas / Grupos Educacionais (Nível Padrão/Enade)
+    { name: 'Estácio de Sá', type: 'Privada', fullName: 'Universidade Estácio de Sá' },
+    { name: 'Anhanguera', type: 'Privada', fullName: 'Anhanguera Educacional' },
+    { name: 'UNIP', type: 'Privada', fullName: 'Universidade Paulista' }
+];
+
+// Generate MOCK_EXAMS dynamically for all subjects and universities
 const generateExams = (): Exam[] => {
   const exams: Exam[] = [];
+  
   SUBJECTS_LIST.forEach((subject, index) => {
-     // Add UFF Exam
-     exams.push({
-        id: `uff-${index}`,
-        university: 'UFF',
-        subject: subject,
-        year: 2020 + (index % 4), // Cycles through 2020-2023
-        period: `${(index % 2) + 1}º Sem`,
-        url: '#'
-     });
-     // Add Estácio Exam
-     exams.push({
-        id: `est-${index}`,
-        university: 'Estácio de Sá',
-        subject: subject,
-        year: 2019 + (index % 5), // Cycles through 2019-2023
-        period: `${((index + 1) % 2) + 1}º Sem`,
-        url: '#'
+     UNIVERSITIES.forEach((uni, uIndex) => {
+        // Nem todas as faculdades têm prova de tudo no mock, vamos variar um pouco
+        // Mas garantindo que matérias principais (Cálculo, Física, Circuitos) tenham em todas
+        const isCoreSubject = index < 25; 
+        const randomFactor = (index + uIndex) % 3 !== 0; // 2/3 de chance de ter a prova
+
+        if (isCoreSubject || randomFactor) {
+            exams.push({
+                id: `${uni.name.toLowerCase()}-${index}`,
+                university: uni.name as any,
+                subject: subject,
+                year: 2020 + (index % 4), // Cycles through 2020-2023
+                period: `${(index % 2) + 1}º Sem`,
+                url: '#'
+            });
+        }
      });
   });
   return exams;

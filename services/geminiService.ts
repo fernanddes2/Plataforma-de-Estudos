@@ -12,7 +12,7 @@ const ENGINEERING_BIBLIOGRAPHY = `
 *   **Circuitos:** "Fundamentos de Circuitos Elétricos" (Sadiku), "Circuitos Elétricos" (Nilsson & Riedel).
 *   **Eletromagnetismo:** "Eletromagnetismo" (Hayt), "Elementos de Eletromagnetismo" (Sadiku).
 *   **Cálculo:** "Cálculo" (James Stewart), "Um Curso de Cálculo" (Guidorizzi).
-*   **Física:** "Fundamentos de Física" (Halliday & Resnick), "Física" (Sears & Zemansky).
+*   **Física:** "Fundamentos de Física" (Halliday & Resnick), "Física" (Sears & Zemansky), "Física" (Moysés Nussenzveig - para USP/Federais).
 *   **Controle:** "Engenharia de Controle Moderno" (Ogata).
 *   **Eletrônica:** "Dispositivos Eletrônicos" (Boylestad), "Microeletrônica" (Sedra/Smith).
 *   **Sinais:** "Sinais e Sistemas" (Oppenheim).
@@ -103,19 +103,27 @@ export const sendMessageToGemini = async (chat: Chat, message: string, mode: 're
 };
 
 export const generateQuizForTopic = async (topic: string, count: number = 5, context: string | boolean = false): Promise<Question[]> => {
-    // Definindo o "Contexto" (Universidade)
-    let difficultyProfile = "";
-    let styleInstruction = "";
+    // Definindo o "Contexto" (Universidade) e Nível de Dificuldade
+    let difficultyProfile = "Nível Universitário Padrão";
+    let styleInstruction = "Equilibre teoria e prática.";
+    let contextStr = typeof context === 'string' ? context : '';
 
-    if (context === 'UFF' || (typeof context === 'string' && context.includes('UFF'))) {
-        difficultyProfile = "Nível Difícil (Padrão Universidade Federal)";
-        styleInstruction = "Foque em questões analíticas, teóricas aprofundadas e cálculos complexos. Use terminologia acadêmica rigorosa. As questões devem exigir raciocínio dedutivo.";
-    } else if (context === 'Estácio de Sá' || (typeof context === 'string' && context.includes('Estácio'))) {
-        difficultyProfile = "Nível Médio (Padrão AV1/AV2 Privada)";
-        styleInstruction = "Foque em questões objetivas, aplicações diretas de fórmulas e conceitos práticos. Estilo de avaliação de múltipla escolha padrão ENADE/Avaliação Institucional.";
-    } else {
-        difficultyProfile = "Nível Universitário Padrão";
-        styleInstruction = "Equilibre teoria e prática.";
+    // Lógica de "Personalidade" da Prova baseada na Universidade
+    if (contextStr.includes('ITA') || contextStr.includes('IME')) {
+        difficultyProfile = "NÍVEL MILITAR (INSANO/EXTREMO)";
+        styleInstruction = "Questões devem exigir raciocínio matemático avançado, demonstrações e manipulação algébrica complexa. Evite números simples. Use 'pegadinhas' conceituais de alto nível. Similar a olimpíadas de física/matemática.";
+    } else if (contextStr.includes('USP') || contextStr.includes('UNICAMP') || contextStr.includes('UFRJ') || contextStr.includes('UFMG')) {
+        difficultyProfile = "NÍVEL PÚBLICA DE EXCELÊNCIA (DIFÍCIL)";
+        styleInstruction = "Foque em rigor teórico profundo, deduções e problemas que exigem entendimento sólido do conceito físico. Referência: Moysés/Halliday nível hard.";
+    } else if (contextStr.includes('PUC') || contextStr.includes('Mackenzie') || contextStr.includes('FEI')) {
+        difficultyProfile = "NÍVEL PRIVADA DE REFERÊNCIA (MÉDIO/ALTO)";
+        styleInstruction = "Boas questões teóricas e práticas. Foco em engenharia aplicada, mas com boa base matemática.";
+    } else if (contextStr.includes('Estácio') || contextStr.includes('Anhanguera') || contextStr.includes('UNIP')) {
+        difficultyProfile = "NÍVEL PRIVADA PADRÃO (MÉDIO)";
+        styleInstruction = "Questões objetivas, aplicação direta de fórmulas, estilo ENADE. Foco em verificar aprendizado básico e prático.";
+    } else if (contextStr.includes('UFF') || contextStr.includes('Federal')) {
+        difficultyProfile = "NÍVEL FEDERAL PADRÃO (DIFÍCIL)";
+        styleInstruction = "Analítico e rigoroso.";
     }
     
     const prompt = `
@@ -201,19 +209,52 @@ export const explainQuestion = async (question: string, options: string[], corre
 };
 
 export const generateLessonContent = async (topic: string): Promise<string> => {
-    const prompt = `
-        Crie uma aula completa sobre "${topic}" para Engenharia Elétrica.
+    // Lógica para diferenciar Ciclo Básico (Teórico/Fundamentos) vs Profissionalizante (Prático/Indústria)
+    const basicCycleKeywords = [
+        'Cálculo', 'Física', 'Álgebra', 'Geometria', 'Química', 'Mecânica Geral', 
+        'Probabilidade', 'Estatística', 'Fenômenos', 'Resistência'
+    ];
+    const isBasicCycle = basicCycleKeywords.some(keyword => topic.includes(keyword));
+
+    let structurePrompt = "";
+    
+    if (isBasicCycle) {
+        structurePrompt = `
+        **ESTRUTURA FOCADA EM CICLO BÁSICO/TEÓRICO (ALTO RIGOR):**
+        # ${topic}
+        ## 1. Definição Formal
+        Apresente as definições matemáticas precisas (Ex: Epsilon-Delta para limites, Leis de Newton vetoriais). Cite teoremas relevantes (ex: Teorema do Valor Médio, Teorema de Gauss).
         
-        **Estrutura Obrigatória:**
+        ## 2. Demonstração / Dedução Importante
+        Escolha um resultado chave deste tópico e mostre a dedução passo a passo usando LaTeX. Professores universitários cobram a origem das fórmulas.
+        
+        ## 3. Exemplo Clássico de Prova
+        Resolva um problema típico de livro-texto (estilo Guidorizzi, Halliday ou Moysés). Foco na modelagem do problema.
+        
+        ## 4. Visualização (Gráfico ou Diagrama)
+        Gere um código Mermaid ou SVG simples que ajude a visualizar o conceito abstrato.
+        
+        ## 5. Conexão com a Engenharia
+        Brevemente, explique onde este conceito matemático/físico será fundamental nas matérias futuras (ex: "Integrais são usadas para calcular potência média em Circuitos II").
+        `;
+    } else {
+        structurePrompt = `
+        **ESTRUTURA FOCADA EM ENGENHARIA APLICADA:**
         # ${topic}
         ## 1. Resumo Executivo (Visão Geral)
         ## 2. Diagrama de Conceito (Gere um código Mermaid ou SVG aqui representando o sistema)
         ## 3. Fundamentos Matemáticos (Use LaTeX rigoroso)
         ## 4. Exemplo Numérico Resolvido (Passo a passo com 'j' para complexos)
-        ## 5. Simulação Interativa (Use $$INTERACTIVE|...$$)
-        ## 6. Aplicação no Mundo Real (Onde isso é usado hoje?)
+        ## 5. Simulação Interativa (Use $$INTERACTIVE|...$$ se possível)
+        ## 6. Aplicação no Mundo Real (Onde isso é usado hoje na indústria?)
+        `;
+    }
+
+    const prompt = `
+        Crie uma aula completa e detalhada sobre "${topic}" para um estudante de Engenharia.
+        ${structurePrompt}
         
-        Seja visual e prático.
+        Seja didático, mas mantenha o nível universitário. Use formatação rica (Markdown, LaTeX, Bold).
     `;
 
     try {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_LEARNING_MODULES } from '../constants';
-import { PlayCircle, CheckCircle, Clock, ArrowRight, Search, BookOpen, X, CheckSquare, Sparkles, RotateCcw, ListChecks, ExternalLink, FolderOpen } from 'lucide-react';
+import { PlayCircle, CheckCircle, Clock, ArrowRight, Search, BookOpen, X, CheckSquare, Sparkles, RotateCcw, ListChecks, ExternalLink, FolderOpen, History } from 'lucide-react';
 import { generateLessonContent, extractTopicsFromLesson } from '../services/geminiService';
 import { LearningModule } from '../types';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -66,9 +66,31 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
   const [loading, setLoading] = useState(false);
   const [loadingTopics, setLoadingTopics] = useState(false);
   const [shouldRestoreScroll, setShouldRestoreScroll] = useState(false);
+  const [recentModules, setRecentModules] = useState<LearningModule[]>([]);
   
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load recent history on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('electroMindRecentModules');
+      if (saved) {
+        setRecentModules(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error("Error loading recent history", e);
+    }
+  }, []);
+
+  const updateRecentHistory = (module: LearningModule) => {
+    setRecentModules(prev => {
+      const filtered = prev.filter(m => m.id !== module.id);
+      const updated = [module, ...filtered].slice(0, 4); // Keep last 4
+      localStorage.setItem('electroMindRecentModules', JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   const filteredModules = MOCK_LEARNING_MODULES.filter(module => 
     module.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -76,6 +98,7 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
 
   const handleOpenModule = async (module: LearningModule) => {
     setSelectedModule(module);
+    updateRecentHistory(module); // Add to history
     setLoading(true);
     setLessonContent(null);
     setExtractedTopics(null);
@@ -314,8 +337,39 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
             </a>
         </div>
 
+        {/* Recent History Section */}
+        {recentModules.length > 0 && (
+          <div className="mt-8 animate-fade-in">
+             <h2 className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3 flex items-center">
+               <History className="w-4 h-4 mr-2" /> Continuar de onde parou
+             </h2>
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+               {recentModules.map(module => {
+                 const progress = learningProgress[module.id] || 0;
+                 return (
+                   <div 
+                     key={module.id}
+                     onClick={() => handleOpenModule(module)}
+                     className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700 hover:border-primary-400 dark:hover:border-primary-500 cursor-pointer transition-all shadow-sm group"
+                   >
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-bold text-gray-800 dark:text-white text-sm line-clamp-1 group-hover:text-primary-600 transition-colors">
+                          {module.title}
+                        </h3>
+                        <span className="text-xs font-mono text-gray-400">{progress}%</span>
+                      </div>
+                      <div className="w-full h-1 bg-gray-100 dark:bg-slate-700 rounded-full mt-2 overflow-hidden">
+                        <div className="h-full bg-primary-500" style={{ width: `${progress}%` }}></div>
+                      </div>
+                   </div>
+                 );
+               })}
+             </div>
+          </div>
+        )}
+
         {/* Search Bar */}
-        <div className="mt-6 relative max-w-xl">
+        <div className="mt-8 relative max-w-xl">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-gray-400" />
             </div>
