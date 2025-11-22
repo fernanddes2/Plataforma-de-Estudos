@@ -9,8 +9,16 @@ interface QuestionBankProps {
 const QuestionBank: React.FC<QuestionBankProps> = ({ onStartQuiz }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
+    // Função auxiliar para normalizar texto (remover acentos e lowercase)
+    const normalizeText = (text: string) => {
+        return text
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase();
+    };
+
     const filteredSubjects = SUBJECTS_LIST.filter(subject => 
-        subject.toLowerCase().includes(searchTerm.toLowerCase())
+        normalizeText(subject).includes(normalizeText(searchTerm))
     ).sort();
 
     // Helper to assign a mock category color/icon based on subject name
@@ -65,7 +73,7 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ onStartQuiz }) => {
                     <input
                         type="text"
                         className="block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-slate-700 rounded-xl leading-5 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all shadow-sm"
-                        placeholder="Buscar disciplina (ex: Circuitos, Cálculo...)"
+                        placeholder="Buscar disciplina (ex: Circuitos, Cálculo, Eletrônica...)"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -117,7 +125,7 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ onStartQuiz }) => {
                         <Hash className="w-8 h-8 text-gray-400" />
                     </div>
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white">Nenhuma disciplina encontrada</h3>
-                    <p className="text-gray-500 dark:text-gray-400">Tente buscar por outro termo.</p>
+                    <p className="text-gray-500 dark:text-gray-400">Tente buscar por sinônimos ou partes do nome.</p>
                 </div>
             )}
         </div>

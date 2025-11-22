@@ -7,7 +7,7 @@ import AIChat from './components/AIChat';
 import LearningMode from './components/LearningMode';
 import ExamArchive from './components/ExamArchive';
 import { ViewState } from './types';
-import { MOCK_STATS } from './constants';
+import { INITIAL_STATS } from './constants';
 import { Menu, Zap } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -29,10 +29,15 @@ const App: React.FC = () => {
   const [stats, setStats] = useState(() => {
       try {
         const saved = localStorage.getItem('electroMindStats');
-        return saved ? JSON.parse(saved) : MOCK_STATS;
+        return saved ? JSON.parse(saved) : INITIAL_STATS;
       } catch (e) {
-        return MOCK_STATS;
+        return INITIAL_STATS;
       }
+  });
+
+  // Local Storage Last Update Timestamp
+  const [lastUpdate, setLastUpdate] = useState(() => {
+      return localStorage.getItem('electroMindLastUpdate') || 'Nunca';
   });
 
   // Local Storage Learning Progress
@@ -69,23 +74,41 @@ const App: React.FC = () => {
       localStorage.setItem('electroMindLearning', JSON.stringify(learningProgress));
   }, [learningProgress]);
 
+  // Helper to update timestamp
+  const updateTimestamp = () => {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const newTimestamp = `${dateStr} às ${timeStr}`;
+    
+    setLastUpdate(newTimestamp);
+    localStorage.setItem('electroMindLastUpdate', newTimestamp);
+  };
+
   const handleUpdateStats = (isCorrect: boolean) => {
+    updateTimestamp();
     setStats((prev: any) => {
         const newSolved = prev.questionsSolved + 1;
+        // Calculate new accuracy
+        // Current correct answers estimate
         const oldCorrect = Math.round((prev.accuracy / 100) * prev.questionsSolved);
         const newCorrect = oldCorrect + (isCorrect ? 1 : 0);
         const newAccuracy = Math.round((newCorrect / newSolved) * 100);
 
+        // Update topic performance (simple logic: just add topic if not exists or update generic score)
+        // In a real app, we would track per topic. For now, we keep the structure.
+        
         return {
             ...prev,
             questionsSolved: newSolved,
             accuracy: isNaN(newAccuracy) ? 0 : newAccuracy,
-            streakDays: prev.streakDays 
+            streakDays: prev.streakDays || 1 
         };
     });
   };
 
   const handleUpdateLearningProgress = (moduleId: string, progress: number) => {
+    updateTimestamp();
     setLearningProgress(prev => ({
       ...prev,
       [moduleId]: progress
@@ -122,7 +145,13 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (currentView) {
       case ViewState.DASHBOARD:
-        return <Dashboard onNavigate={handleNavigate} />;
+        return (
+          <Dashboard 
+            onNavigate={handleNavigate} 
+            stats={stats} 
+            lastUpdate={lastUpdate} 
+          />
+        );
       case ViewState.QUESTION_BANK:
         return <QuestionBank onStartQuiz={handleStartQuiz} />;
       case ViewState.LEARNING:
@@ -146,9 +175,21 @@ const App: React.FC = () => {
           />
         );
       case ViewState.STATS:
-         return <Dashboard onNavigate={handleNavigate} />;
+         return (
+            <Dashboard 
+              onNavigate={handleNavigate} 
+              stats={stats} 
+              lastUpdate={lastUpdate} 
+            />
+         );
       default:
-        return <Dashboard onNavigate={handleNavigate} />;
+        return (
+            <Dashboard 
+              onNavigate={handleNavigate} 
+              stats={stats} 
+              lastUpdate={lastUpdate} 
+            />
+        );
     }
   };
 

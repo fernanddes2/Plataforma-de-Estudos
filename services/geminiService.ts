@@ -7,8 +7,24 @@ const API_KEY = process.env.API_KEY || '';
 // Initialize Gemini Client
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
+// Bibliografia baseada no conteúdo típico de drives de Engenharia (UFF/Federais)
+const ENGINEERING_BIBLIOGRAPHY = `
+*   **Circuitos:** "Fundamentos de Circuitos Elétricos" (Sadiku), "Circuitos Elétricos" (Nilsson & Riedel).
+*   **Eletromagnetismo:** "Eletromagnetismo" (Hayt), "Elementos de Eletromagnetismo" (Sadiku).
+*   **Cálculo:** "Cálculo" (James Stewart), "Um Curso de Cálculo" (Guidorizzi).
+*   **Física:** "Fundamentos de Física" (Halliday & Resnick), "Física" (Sears & Zemansky).
+*   **Controle:** "Engenharia de Controle Moderno" (Ogata).
+*   **Eletrônica:** "Dispositivos Eletrônicos" (Boylestad), "Microeletrônica" (Sedra/Smith).
+*   **Sinais:** "Sinais e Sistemas" (Oppenheim).
+`;
+
 const SYSTEM_INSTRUCTION = `
 Você é o ElectroBot, um tutor especialista em Engenharia Elétrica de nível universitário avançado.
+
+**FONTE DE VERDADE (BIBLIOGRAFIA):**
+Baseie suas explicações, notações e rigor matemático nas seguintes referências padrão:
+${ENGINEERING_BIBLIOGRAPHY}
+Se houver divergência de notação, prefira a notação do Sadiku (para circuitos) e Hayt (para eletromagnetismo).
 
 **ESTRUTURA DE RESPOSTA OBRIGATÓRIA (NÍVEIS DE PROFUNDIDADE):**
 Para explicações teóricas ou resolução de problemas, siga esta ordem:
@@ -21,7 +37,7 @@ Para explicações teóricas ou resolução de problemas, siga esta ordem:
 
 1.  **MATEMÁTICA (LATEX):**
     *   Use \`$$ ... $$\` para equações em bloco e \`$ ... $\` para inline.
-    *   Use \`j\` para imaginários.
+    *   Use \`j\` para imaginários (Notação de Engenharia).
 
 2.  **VISUALIZAÇÃO (SVG & MERMAID):**
     *   **Diagramas de Blocos/Fluxos:** Use blocos de código \`\`\`mermaid\`. IMPORTANTE: Sempre coloque os rótulos de texto entre aspas duplas para evitar erros de sintaxe com parênteses ou caracteres especiais. Ex: \`A["Texto (com) detalhe"]\`.
@@ -86,28 +102,46 @@ export const sendMessageToGemini = async (chat: Chat, message: string, mode: 're
   }
 };
 
-export const generateQuizForTopic = async (topic: string, count: number = 5, isExamMode: boolean = false): Promise<Question[]> => {
-    const difficulty = isExamMode ? "Difícil, cálculos complexos e estilo concurso/prova (ENADE/Petrobras)" : "Conceitual e Prática";
+export const generateQuizForTopic = async (topic: string, count: number = 5, context: string | boolean = false): Promise<Question[]> => {
+    // Definindo o "Contexto" (Universidade)
+    let difficultyProfile = "";
+    let styleInstruction = "";
+
+    if (context === 'UFF' || (typeof context === 'string' && context.includes('UFF'))) {
+        difficultyProfile = "Nível Difícil (Padrão Universidade Federal)";
+        styleInstruction = "Foque em questões analíticas, teóricas aprofundadas e cálculos complexos. Use terminologia acadêmica rigorosa. As questões devem exigir raciocínio dedutivo.";
+    } else if (context === 'Estácio de Sá' || (typeof context === 'string' && context.includes('Estácio'))) {
+        difficultyProfile = "Nível Médio (Padrão AV1/AV2 Privada)";
+        styleInstruction = "Foque em questões objetivas, aplicações diretas de fórmulas e conceitos práticos. Estilo de avaliação de múltipla escolha padrão ENADE/Avaliação Institucional.";
+    } else {
+        difficultyProfile = "Nível Universitário Padrão";
+        styleInstruction = "Equilibre teoria e prática.";
+    }
+    
     const prompt = `
-      Gere um array JSON com ${count} questões de múltipla escolha sobre "${topic}".
-      Nível de dificuldade: ${difficulty}.
+      Gere um simulado JSON com ${count} questões sobre "${topic}".
       
-      IMPORTANTE PARA O JSON:
-      Para fórmulas no campo "text" ou "explanation", NÃO use LaTeX complexo pois pode quebrar o JSON. Use notação Unicode legível (ex: Ω, μF, integral ∫) ou texto simples claro (V = R * I).
+      CONTEXTO DA PROVA: ${difficultyProfile}
+      ESTILO DAS QUESTÕES: ${styleInstruction}
       
-      O formato do JSON deve ser estritamente:
+      REGRAS CRÍTICAS DE FORMATO (JSON + LaTeX):
+      1. Responda APENAS com o JSON.
+      2. Use LaTeX para TODAS as fórmulas matemáticas nos campos "text" e "explanation".
+      3. ESCAPE AS BARRAS INVERTIDAS NO JSON: Use \\\\ (ex: \\\\frac{a}{b}, \\\\Omega).
+      4. NÃO use LaTeX complexo que possa quebrar o JSON.
+      
+      Schema:
       [
         {
-          "id": "unique_id",
+          "id": "...",
           "topic": "${topic}",
           "difficulty": "Fácil" | "Médio" | "Difícil",
-          "text": "Enunciado da questão...",
+          "text": "Enunciado com LaTeX escapado (\\\\int x dx)...",
           "options": ["Opção A", "Opção B", "Opção C", "Opção D"],
           "correctAnswerIndex": 0,
-          "explanation": "Explicação detalhada."
+          "explanation": "Explicação detalhada com LaTeX."
         }
       ]
-      NÃO use markdown no JSON. Apenas o JSON puro.
     `;
 
     try {
@@ -116,48 +150,7 @@ export const generateQuizForTopic = async (topic: string, count: number = 5, isE
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
-                responseSchema: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      id: {
-                        type: Type.STRING,
-                      },
-                      topic: {
-                        type: Type.STRING,
-                      },
-                      difficulty: {
-                        type: Type.STRING,
-                      },
-                      text: {
-                        type: Type.STRING,
-                      },
-                      options: {
-                        type: Type.ARRAY,
-                        items: {
-                          type: Type.STRING,
-                        },
-                      },
-                      correctAnswerIndex: {
-                        type: Type.INTEGER,
-                      },
-                      explanation: {
-                        type: Type.STRING,
-                      },
-                    },
-                    required: [
-                      'id',
-                      'topic',
-                      'difficulty',
-                      'text',
-                      'options',
-                      'correctAnswerIndex',
-                      'explanation',
-                    ],
-                  },
-                },
-                temperature: 0.8,
+                temperature: 0.7, 
             }
         });
 
@@ -167,14 +160,14 @@ export const generateQuizForTopic = async (topic: string, count: number = 5, isE
         if (Array.isArray(questions)) {
              return questions.map((q: any, idx: number) => ({
                 ...q,
-                id: `gen-${Date.now()}-${idx}`,
-                options: Array.isArray(q.options) ? q.options : ["Erro na geração", "Tente novamente", "...", "..."]
+                id: `exam-${Date.now()}-${idx}`,
+                options: Array.isArray(q.options) ? q.options : ["Erro", "Erro", "Erro", "Erro"]
             }));
         }
         return [];
 
     } catch (error) {
-        console.error("Error generating quiz:", error);
+        console.error("Error generating exam:", error);
         return [];
     }
 };

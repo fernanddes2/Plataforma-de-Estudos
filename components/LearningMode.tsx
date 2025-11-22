@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_LEARNING_MODULES } from '../constants';
-import { PlayCircle, CheckCircle, Clock, ArrowRight, Search, BookOpen, X, CheckSquare, Sparkles, RotateCcw, ListChecks } from 'lucide-react';
+import { PlayCircle, CheckCircle, Clock, ArrowRight, Search, BookOpen, X, CheckSquare, Sparkles, RotateCcw, ListChecks, ExternalLink, FolderOpen } from 'lucide-react';
 import { generateLessonContent, extractTopicsFromLesson } from '../services/geminiService';
 import { LearningModule } from '../types';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -215,7 +215,22 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
                 ref={contentRef}
                 onScroll={handleScroll}
               >
-                  <div className="max-w-5xl mx-auto bg-white dark:bg-slate-800 p-6 md:p-10 2xl:p-14 rounded-2xl shadow-sm min-h-full mb-20 transition-all dark:border dark:border-slate-700">
+                  <div className="max-w-5xl mx-auto bg-white dark:bg-slate-800 p-6 md:p-10 2xl:p-14 rounded-2xl shadow-sm min-h-full mb-20 transition-all dark:border dark:border-slate-700 relative">
+                      
+                      {/* Reference Material Link */}
+                      {!loading && (
+                          <a 
+                            href="https://drive.google.com/drive/folders/0B5t8V5qZUOqpc3JUX1dGSGc1SUk?resourcekey=0-0ZFBc1gjxduqPlYrLzPaLA&usp=drive_link"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="absolute top-6 right-6 hidden md:flex items-center space-x-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-sm font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors border border-emerald-200 dark:border-emerald-800"
+                          >
+                              <FolderOpen className="w-4 h-4" />
+                              <span>Consultar Acervo (Drive)</span>
+                              <ExternalLink className="w-3 h-3" />
+                          </a>
+                      )}
+
                       {loading ? (
                           <SkeletonLoader />
                       ) : (
@@ -282,8 +297,22 @@ const LearningMode: React.FC<LearningModeProps> = ({ learningProgress, onUpdateP
   return (
     <div className="p-8 2xl:p-12 max-w-screen-2xl 2xl:max-w-[1800px] mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl 2xl:text-4xl font-bold text-gray-900 dark:text-white">Conteúdos e Aulas</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-2 2xl:text-lg">Guias de estudo gerados por IA para todas as disciplinas de Engenharia Elétrica.</p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 className="text-3xl 2xl:text-4xl font-bold text-gray-900 dark:text-white">Conteúdos e Aulas</h1>
+                <p className="text-gray-500 dark:text-gray-400 mt-2 2xl:text-lg">Guias de estudo gerados por IA baseados em bibliografia de referência.</p>
+            </div>
+            
+            <a 
+                href="https://drive.google.com/drive/folders/0B5t8V5qZUOqpc3JUX1dGSGc1SUk?resourcekey=0-0ZFBc1gjxduqPlYrLzPaLA&usp=drive_link"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md transition-all text-sm"
+            >
+                <FolderOpen className="w-4 h-4 mr-2" />
+                Acessar Acervo Digital
+            </a>
+        </div>
 
         {/* Search Bar */}
         <div className="mt-6 relative max-w-xl">

@@ -250,7 +250,7 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
                             : 'bg-gray-300 dark:bg-slate-700 cursor-not-allowed'
                         }`}
                     >
-                        Responder
+                        Verificar Resposta
                     </button>
                 ) : (
                     <div className="flex justify-end">
