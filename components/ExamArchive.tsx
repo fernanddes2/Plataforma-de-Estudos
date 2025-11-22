@@ -6,6 +6,56 @@ interface ExamArchiveProps {
     onStartExam: (subject: string, university: string) => void;
 }
 
+interface ExamCardProps {
+    exam: any;
+    onStart: (subject: string, university: string) => void;
+}
+
+const ExamCard: React.FC<ExamCardProps> = ({ exam, onStart }) => (
+    <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary-400 transition-all flex flex-col justify-between gap-2">
+        <div>
+            <div className="flex items-center justify-between mb-2">
+                <h4 className="font-bold text-gray-900 dark:text-white">{exam.university}</h4>
+                <span className="text-xs font-mono text-gray-400">{exam.year}</span>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+               <Calendar className="w-3 h-3 mr-1" /> {exam.period}
+            </p>
+        </div>
+        <button 
+            onClick={() => onStart(exam.subject, exam.university)}
+            className="w-full py-2 mt-2 bg-gray-100 dark:bg-slate-700 hover:bg-primary-600 hover:text-white dark:hover:bg-primary-500 text-gray-700 dark:text-gray-200 font-bold rounded-lg transition-colors text-xs"
+        >
+            Praticar
+        </button>
+    </div>
+);
+
+interface CategorySectionProps {
+    title: string;
+    icon: any;
+    colorClass: string;
+    exams: any[];
+    onStartExam: (subject: string, university: string) => void;
+}
+
+const CategorySection: React.FC<CategorySectionProps> = ({ title, icon: Icon, colorClass, exams, onStartExam }) => {
+  if (exams.length === 0) return null;
+  return (
+    <div className="mb-8 animate-fade-in-up">
+      <div className={`flex items-center space-x-3 mb-4 p-3 rounded-lg border ${colorClass}`}>
+          <div className="p-2 bg-white/50 dark:bg-black/20 rounded-full">
+              <Icon className="w-5 h-5" />
+          </div>
+          <h3 className="font-bold text-lg">{title}</h3>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {exams.map((exam: any) => <ExamCard key={exam.id} exam={exam} onStart={onStartExam} />)}
+      </div>
+    </div>
+  );
+};
+
 const ExamArchive: React.FC<ExamArchiveProps> = ({ onStartExam }) => {
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -98,45 +148,6 @@ const ExamArchive: React.FC<ExamArchiveProps> = ({ onStartExam }) => {
     );
   }
 
-  // Componente Auxiliar: Card de Prova
-  const ExamCard = ({ exam }: { exam: any }) => (
-      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary-400 transition-all flex flex-col justify-between gap-2">
-          <div>
-              <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-bold text-gray-900 dark:text-white">{exam.university}</h4>
-                  <span className="text-xs font-mono text-gray-400">{exam.year}</span>
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                 <Calendar className="w-3 h-3 mr-1" /> {exam.period}
-              </p>
-          </div>
-          <button 
-              onClick={() => onStartExam(exam.subject, exam.university)}
-              className="w-full py-2 mt-2 bg-gray-100 dark:bg-slate-700 hover:bg-primary-600 hover:text-white dark:hover:bg-primary-500 text-gray-700 dark:text-gray-200 font-bold rounded-lg transition-colors text-xs"
-          >
-              Praticar
-          </button>
-      </div>
-  );
-
-  // Componente Auxiliar: Seção de Categoria
-  const CategorySection = ({ title, icon: Icon, colorClass, exams }: any) => {
-    if (exams.length === 0) return null;
-    return (
-      <div className="mb-8 animate-fade-in-up">
-        <div className={`flex items-center space-x-3 mb-4 p-3 rounded-lg border ${colorClass}`}>
-            <div className="p-2 bg-white/50 dark:bg-black/20 rounded-full">
-                <Icon className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-lg">{title}</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {exams.map((exam: any) => <ExamCard key={exam.id} exam={exam} />)}
-        </div>
-      </div>
-    );
-  };
-
   // --- DETAIL VIEW: PROVAS DA DISCIPLINA ---
   return (
     <div className="p-8 2xl:p-12 max-w-screen-2xl 2xl:max-w-[1800px] mx-auto animate-fade-in-up">
@@ -166,6 +177,7 @@ const ExamArchive: React.FC<ExamArchiveProps> = ({ onStartExam }) => {
              icon={Shield} 
              colorClass="bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
              exams={militaryExams}
+             onStartExam={onStartExam}
           />
 
           {/* 2. Públicas de Excelência */}
@@ -174,6 +186,7 @@ const ExamArchive: React.FC<ExamArchiveProps> = ({ onStartExam }) => {
              icon={Award} 
              colorClass="bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30 text-blue-800 dark:text-blue-200"
              exams={publicTopExams}
+             onStartExam={onStartExam}
           />
 
           {/* 3. Privadas de Referência */}
@@ -182,6 +195,7 @@ const ExamArchive: React.FC<ExamArchiveProps> = ({ onStartExam }) => {
              icon={Building} 
              colorClass="bg-purple-50 dark:bg-purple-900/20 border-purple-100 dark:border-purple-900/30 text-purple-800 dark:text-purple-200"
              exams={privateRefExams}
+             onStartExam={onStartExam}
           />
 
           {/* 4. Privadas Padrão */}
@@ -190,6 +204,7 @@ const ExamArchive: React.FC<ExamArchiveProps> = ({ onStartExam }) => {
              icon={Users} 
              colorClass="bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/30 text-green-800 dark:text-green-200"
              exams={privateStdExams}
+             onStartExam={onStartExam}
           />
       </div>
 

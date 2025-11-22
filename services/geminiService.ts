@@ -77,7 +77,7 @@ const cleanAndParseJSON = (text: string): any => {
 
 export const createChatSession = (): Chat => {
   return ai.chats.create({
-    model: 'gemini-3-pro-preview',
+    model: 'gemini-1.5-flash',
     config: {
       systemInstruction: SYSTEM_INSTRUCTION,
       temperature: 0.3, // Reduced temperature for more rigorous adherence to structure
@@ -196,7 +196,7 @@ export const explainQuestion = async (question: string, options: string[], corre
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-3-pro-preview',
+            model: 'gemini-1.5-flash',
             contents: prompt,
             config: {
                 systemInstruction: SYSTEM_INSTRUCTION
@@ -259,7 +259,7 @@ export const generateLessonContent = async (topic: string): Promise<string> => {
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-3-pro-preview',
+            model: 'gemini-1.5-flash',
             contents: prompt,
             config: {
                 systemInstruction: SYSTEM_INSTRUCTION
