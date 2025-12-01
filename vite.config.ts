@@ -1,16 +1,21 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // Isso diz ao Vite que a raiz do projeto é a pasta atual (onde está o index.html)
-  root: './', 
+  root: './',
   build: {
     outDir: 'dist',
   },
   server: {
-    // Isso ajuda se você estiver rodando em container ou WSL
-    host: true 
+    host: true,
+    // AQUI ESTÁ O TRUQUE: Proxy
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001', // Aponta para nosso servidor Node
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   }
 });
