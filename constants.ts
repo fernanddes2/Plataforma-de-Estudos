@@ -32,7 +32,6 @@ export const SUBJECTS_LIST = [
   "Circuitos Elétricos II (CA)",
   "Laboratório de Circuitos Elétricos",
   "Eletromagnetismo",
-  "Eletromagnetismo I",
 
   // --- ELETRÔNICA ---
   "Eletrônica",
@@ -75,7 +74,6 @@ export const SUBJECTS_LIST = [
 
   // --- CONTROLE E AUTOMAÇÃO ---
   "Sinais e Sistemas",
-  "Sistemas de Controle",
   "Sistemas de Controle I",
   "Sistemas de Controle II",
   "Automação Industrial e Robótica",
@@ -151,7 +149,7 @@ const generateExams = (): Exam[] => {
         if (isCoreSubject || randomFactor) {
             exams.push({
                 id: `${uni.name.toLowerCase()}-${index}`,
-                university: uni.name as any,
+                university: uni.name, // Removemos o 'as any' se você atualizou o types.ts
                 subject: subject,
                 year: 2020 + (index % 4), // Cycles through 2020-2023
                 period: `${(index % 2) + 1}º Sem`,
@@ -186,6 +184,5 @@ export const INITIAL_STATS: UserStats = {
   topicPerformance: []
 };
 
-// Initial sample data just so the UI isn't completely empty on first load if needed, 
-// but logically we start from INITIAL_STATS in App.tsx
+// Dados de exemplo iniciais para o banco de questões
 export const QUESTION_BANK_DATA: Question[] = [];

@@ -9,10 +9,9 @@ export default defineConfig({
   },
   server: {
     host: true,
-    // AQUI ESTÁ O TRUQUE: Proxy
     proxy: {
       '/api': {
-        target: 'http://localhost:3001', // Aponta para nosso servidor Node
+        target: 'http://localhost:3001',
         changeOrigin: true,
         secure: false,
       }

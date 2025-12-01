@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+
+// Componentes
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import QuestionMode from './components/QuestionMode';
@@ -6,8 +8,12 @@ import QuestionBank from './components/QuestionBank';
 import AIChat from './components/AIChat';
 import LearningMode from './components/LearningMode';
 import ExamArchive from './components/ExamArchive';
-import { ViewState } from './types';
-import { INITIAL_STATS } from './constants';
+
+// Arquivos da Raiz (Ajuste de Caminho)
+import { ViewState } from './types';     // Estava em ./types (OK se estiver na raiz)
+import { INITIAL_STATS } from './constants'; // Certifique-se que constants.ts existe na raiz
+
+// Ícones
 import { Menu, Zap } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -89,14 +95,9 @@ const App: React.FC = () => {
     updateTimestamp();
     setStats((prev: any) => {
         const newSolved = prev.questionsSolved + 1;
-        // Calculate new accuracy
-        // Current correct answers estimate
         const oldCorrect = Math.round((prev.accuracy / 100) * prev.questionsSolved);
         const newCorrect = oldCorrect + (isCorrect ? 1 : 0);
         const newAccuracy = Math.round((newCorrect / newSolved) * 100);
-
-        // Update topic performance (simple logic: just add topic if not exists or update generic score)
-        // In a real app, we would track per topic. For now, we keep the structure.
         
         return {
             ...prev,

@@ -1,13 +1,23 @@
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import fetch from 'node-fetch';
 
+const envPath = path.resolve(process.cwd(), '.env.local');
+if (fs.existsSync(envPath)) dotenv.config({ path: envPath });
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const apiKey = process.env.VITE_GOOGLE_API_KEY || process.env.GOOGLE_API_KEY;
+
+app.post('/api/gemini', async (req, res) => {
   try {
-    const apiKey = process.env.GOOGLE_API_KEY || process.env.VITE_GOOGLE_API_KEY;
     const { prompt, history } = req.body;
+    console.log(`📩 Processando: "${prompt?.substring(0, 15)}..."`);
 
     let contents = [];
     if (history && history.length > 0) {
@@ -32,10 +42,15 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
+    if (!response.ok) throw new Error(JSON.stringify(data));
+    
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    return res.status(200).json({ text });
+    res.json({ text });
 
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("❌ Erro:", error.message);
+    res.status(500).json({ error: error.message });
   }
-}
+});
+
+app.listen(3001, () => console.log(`🚀 SERVIDOR LOCAL OK: http://localhost:3001`));
