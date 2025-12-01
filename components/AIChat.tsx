@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+// Certifique-se que o nome do arquivo aqui está correto (geminiService ou ai-service)
 import { createChatSession, sendMessageToGemini } from '../services/geminiService';
-import { ChatMessage } from '../types';
-import { Send, Bot, User, RefreshCw, Sparkles, Book, Zap, BrainCircuit } from 'lucide-react';
-import { Chat } from "@google/genai";
+// AQUI ESTÁ A CORREÇÃO PRINCIPAL:
+// Importamos 'Chat' como 'AppChat' para usar sua interface local, não a do Google
+import { Chat as AppChat, ChatMessage } from '../types';
+import { Send, Bot, User, RefreshCw, Sparkles, Zap, BrainCircuit } from 'lucide-react';
+// REMOVIDO: import { Chat } from "@google/genai"; (Isso causava o conflito)
 import MarkdownRenderer from './MarkdownRenderer';
 
 type ChatMode = 'resolver' | 'socratic';
@@ -18,7 +21,9 @@ const AIChat: React.FC = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [chatMode, setChatMode] = useState<ChatMode>('resolver');
-  const chatSessionRef = useRef<Chat | null>(null);
+  
+  // CORREÇÃO: Usando AppChat (sua interface) em vez de Chat (do Google)
+  const chatSessionRef = useRef<AppChat | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,6 +59,7 @@ const AIChat: React.FC = () => {
     setIsLoading(true);
 
     try {
+      // Agora o chatSessionRef.current tem o tipo correto (AppChat)
       const responseText = await sendMessageToGemini(chatSessionRef.current, userText, chatMode);
       
       setMessages(prev => prev.map(msg => {
