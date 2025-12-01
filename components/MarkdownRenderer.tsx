@@ -35,7 +35,7 @@ const KatexComponent: React.FC<{ tex: string; displayMode: boolean; isKatexReady
     }
   }, [tex, displayMode, isKatexReady]);
 
-  return <span ref={containerRef} className={displayMode ? "block my-4 text-center overflow-x-auto custom-scrollbar" : "inline-block px-0.5 align-middle"} />;
+  return <span ref={containerRef} className={displayMode ? "block my-2 text-center overflow-x-auto custom-scrollbar" : "inline-block px-0.5 align-middle"} />;
 };
 
 // Componente para renderizar Mermaid
@@ -88,7 +88,7 @@ const MermaidBlock: React.FC<{ chart: string; isMermaidReady: boolean }> = ({ ch
   if (!isMermaidReady) return <div className="animate-pulse h-32 bg-gray-100 dark:bg-slate-700 rounded-xl mb-4"></div>;
 
   return (
-    <div className="my-6 flex flex-col items-center bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700 shadow-sm">
+    <div className="my-4 flex flex-col items-center bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700 shadow-sm">
       <div className="flex items-center gap-2 mb-4 text-xs font-bold text-gray-500 uppercase tracking-wider self-start">
          <GitGraph className="w-4 h-4" /> Diagrama
       </div>
@@ -106,7 +106,7 @@ const SvgBlock: React.FC<{ svgCode: string }> = ({ svgCode }) => {
   const cleanSvg = svgCode.replace(/<\?xml.*?\?>/, '').trim();
 
   return (
-    <div className="my-6 flex flex-col items-center bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700 shadow-sm">
+    <div className="my-4 flex flex-col items-center bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700 shadow-sm">
       <div className="flex items-center gap-2 mb-4 text-xs font-bold text-gray-500 uppercase tracking-wider self-start">
          <ImageIcon className="w-4 h-4" /> Visualização Vetorial
       </div>
@@ -176,7 +176,7 @@ const InteractiveMath: React.FC<{ rawContent: string; isKatexReady: boolean }> =
   if (!config) return null;
 
   return (
-    <div className="my-6 p-6 bg-white dark:bg-slate-800 rounded-xl border border-indigo-100 dark:border-slate-700 shadow-sm transition-all">
+    <div className="my-4 p-6 bg-white dark:bg-slate-800 rounded-xl border border-indigo-100 dark:border-slate-700 shadow-sm transition-all">
       <div className="flex items-center gap-2 mb-4 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
         <Settings2 className="w-4 h-4" />
         Simulação Interativa
@@ -307,8 +307,9 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
         if (paragraphBuffer.length > 0) {
             const fullText = paragraphBuffer.join(' ').trim();
             if (fullText) {
+                // Reduzido mb-4 para mb-2 para evitar espaços gigantes
                 nodes.push(
-                    <p key={`p-${nodes.length}`} className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300">
+                    <p key={`p-${nodes.length}`} className="mb-2 leading-relaxed text-gray-700 dark:text-gray-300 text-justify">
                         {renderInlineContent(fullText, `p-${nodes.length}`)}
                     </p>
                 );
@@ -326,7 +327,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
             
             if (block.type === 'code') {
                 nodes.push(
-                    <div key={`code-${index}`} className="my-6 relative bg-gray-900 dark:bg-black rounded-lg border border-gray-800 overflow-hidden shadow-sm">
+                    <div key={`code-${index}`} className="my-4 relative bg-gray-900 dark:bg-black rounded-lg border border-gray-800 overflow-hidden shadow-sm">
                         {block.lang && <span className="absolute top-2 right-2 text-[10px] font-bold text-gray-400 uppercase font-mono bg-gray-800 px-2 py-1 rounded z-10 select-none">{block.lang}</span>}
                         <pre className="p-4 text-sm text-gray-100 overflow-x-auto custom-scrollbar font-mono leading-relaxed">
                             <code>{block.content.trim()}</code>
@@ -348,18 +349,18 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
             return;
         }
 
-        // Headers
+        // Headers - Reduzido margens superiores (mt-8 -> mt-6, etc)
         if (trimmedLine.startsWith('#')) {
             flushParagraph();
             const level = trimmedLine.match(/^#+/)?.[0].length || 0;
             const text = trimmedLine.replace(/^#+\s*/, '');
             
             if (level === 1) {
-                nodes.push(<h1 key={`h1-${index}`} className="text-2xl font-bold mt-8 mb-4 text-gray-900 dark:text-white pb-2 border-b border-gray-200 dark:border-slate-700">{renderInlineContent(text, `h1-${index}`)}</h1>);
+                nodes.push(<h1 key={`h1-${index}`} className="text-2xl font-bold mt-6 mb-3 text-gray-900 dark:text-white pb-2 border-b border-gray-200 dark:border-slate-700">{renderInlineContent(text, `h1-${index}`)}</h1>);
             } else if (level === 2) {
-                nodes.push(<h2 key={`h2-${index}`} className="text-xl font-bold mt-6 mb-3 text-gray-800 dark:text-gray-100">{renderInlineContent(text, `h2-${index}`)}</h2>);
+                nodes.push(<h2 key={`h2-${index}`} className="text-xl font-bold mt-5 mb-2 text-gray-800 dark:text-gray-100">{renderInlineContent(text, `h2-${index}`)}</h2>);
             } else {
-                nodes.push(<h3 key={`h3-${index}`} className="text-lg font-semibold mt-4 mb-2 text-gray-800 dark:text-gray-200">{renderInlineContent(text, `h3-${index}`)}</h3>);
+                nodes.push(<h3 key={`h3-${index}`} className="text-lg font-semibold mt-3 mb-1 text-gray-800 dark:text-gray-200">{renderInlineContent(text, `h3-${index}`)}</h3>);
             }
             return;
         }
@@ -369,7 +370,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
             flushParagraph();
             const text = trimmedLine.substring(2);
             nodes.push(
-                <div key={`list-${index}`} className="flex items-start mb-2 ml-4">
+                <div key={`list-${index}`} className="flex items-start mb-1 ml-4">
                     <span className="mr-3 mt-2 w-1.5 h-1.5 bg-primary-500 rounded-full flex-shrink-0"></span>
                     <div className="text-gray-700 dark:text-gray-300 leading-relaxed">
                         {renderInlineContent(text, `list-${index}`)}

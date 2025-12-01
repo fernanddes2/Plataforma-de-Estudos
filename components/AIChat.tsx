@@ -83,7 +83,7 @@ const AIChat: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-screen-xl 2xl:max-w-[1600px] mx-auto p-4 2xl:p-6">
+    <div className="flex flex-col h-[calc(100vh-4rem)] w-full mx-auto px-4 lg:px-8 py-4">
         {/* Header */}
         <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl p-4 mb-4 flex items-center justify-between shadow-sm">
             <div className="flex items-center space-x-4">

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SUBJECTS_LIST } from '../constants';
-import { BookOpen, Search, ChevronRight, Layers, Hash } from 'lucide-react';
+import { BookOpen, Search, ChevronRight, Layers, Hash, Sparkles } from 'lucide-react';
 
 interface QuestionBankProps {
     onStartQuiz: (topic: string) => void;
@@ -17,9 +17,10 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ onStartQuiz }) => {
             .toLowerCase();
     };
 
+    // Ordenação alfabética robusta e filtragem
     const filteredSubjects = SUBJECTS_LIST.filter(subject => 
         normalizeText(subject).includes(normalizeText(searchTerm))
-    ).sort();
+    ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
     // Helper to assign a mock category color/icon based on subject name
     const getSubjectStyle = (name: string) => {
@@ -105,14 +106,27 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ onStartQuiz }) => {
                                 </h3>
                             </div>
 
-                            <div className="mt-4 pt-4 border-t border-gray-50 dark:border-slate-700 flex items-center justify-between">
-                                <div className="flex items-center text-xs 2xl:text-sm text-gray-400">
-                                    <Layers className="w-3 h-3 mr-1" />
-                                    <span>Módulos Aulas</span>
+                            <div className="mt-4 pt-4 border-t border-gray-50 dark:border-slate-700">
+                                <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onStartQuiz(subject);
+                                    }}
+                                    className="w-full py-2 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/40 text-primary-700 dark:text-primary-300 rounded-lg text-sm font-bold flex items-center justify-center transition-colors mb-2"
+                                >
+                                    <Sparkles className="w-4 h-4 mr-2" />
+                                    Gerar Questões
+                                </button>
+                                
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center text-xs 2xl:text-sm text-gray-400">
+                                        <Layers className="w-3 h-3 mr-1" />
+                                        <span>Módulos Aulas</span>
+                                    </div>
+                                    <span className="text-xs 2xl:text-sm font-medium text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors flex items-center">
+                                        Abrir <ChevronRight className="w-3 h-3 ml-0.5" />
+                                    </span>
                                 </div>
-                                <span className="text-xs 2xl:text-sm font-medium text-primary-600 dark:text-primary-400 group-hover:translate-x-1 transition-transform flex items-center">
-                                    Praticar <ChevronRight className="w-3 h-3 ml-0.5" />
-                                </span>
                             </div>
                         </div>
                     );

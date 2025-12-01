@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Question } from '../types';
-import { CheckCircle, XCircle, ArrowRight, AlertCircle, Sparkles, ChevronRight, RefreshCw, Home, Trophy } from 'lucide-react';
+import { CheckCircle, XCircle, ArrowRight, AlertCircle, Sparkles, ChevronRight, RefreshCw, Home, Trophy, Zap } from 'lucide-react';
 import { explainQuestion, generateQuizForTopic } from '../services/geminiService';
 import MarkdownRenderer from './MarkdownRenderer';
 
@@ -36,18 +36,33 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
         if (hasFetched.current) return;
         hasFetched.current = true;
 
-        setLoading(true);
-        try {
-            const newQuestions = await generateQuizForTopic(topicName, 5, isExamMode);
-            setQuestions(newQuestions);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
+        await fetchNewQuestions();
     };
     loadQuestions();
   }, [topicName, initialQuestions, isExamMode]);
+
+  // --- NOVA FUNÇÃO: Buscar novas questões ---
+  const fetchNewQuestions = async () => {
+      setLoading(true);
+      setQuestions([]);
+      setCurrentIndex(0);
+      setScore(0);
+      setQuizFinished(false);
+      setIsAnswered(false);
+      setSelectedOption(null);
+      setAiExplanation(null);
+
+      try {
+          // Aumentado a quantidade conforme pedido: 12 para Provas, 15 para Banco
+          const questionCount = isExamMode ? 12 : 15;
+          const newQuestions = await generateQuizForTopic(topicName, questionCount, isExamMode);
+          setQuestions(newQuestions);
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setLoading(false);
+      }
+  };
 
   const currentQuestion = questions[currentIndex];
   const isCorrect = currentQuestion ? selectedOption === currentQuestion.correctAnswerIndex : false;
@@ -90,11 +105,13 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
 
   if (loading) {
       return (
-          <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+          <div className="flex flex-col items-center justify-center h-full p-8 text-center animate-fade-in">
               <div className="w-16 h-16 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-6"></div>
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Gerando Questões com IA</h2>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+                  {isExamMode ? 'Elaborando Prova' : 'Gerando Questões'}
+              </h2>
               <p className="text-gray-500 dark:text-gray-400 max-w-md">
-                  O ElectroBot está criando questões inéditas sobre <strong>{topicName}</strong> para você...
+                  O ElectroBot está buscando questões {isExamMode ? 'reais de provas anteriores' : 'no banco de dados'} sobre <strong>{topicName}</strong>...
               </p>
           </div>
       );
@@ -125,7 +142,7 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
                   <div className="space-y-3">
                       <button 
                           onClick={() => {
-                              // Reset state to restart
+                              // Resetar para refazer as MESMAS questões
                               setCurrentIndex(0);
                               setScore(0);
                               setQuizFinished(false);
@@ -135,8 +152,17 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
                           }}
                           className="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold transition-colors flex items-center justify-center"
                       >
-                          <RefreshCw className="w-4 h-4 mr-2" /> Refazer Quiz
+                          <RefreshCw className="w-4 h-4 mr-2" /> Refazer este Quiz
                       </button>
+                      
+                      {/* NOVO BOTÃO: GERAR NOVO */}
+                      <button 
+                          onClick={fetchNewQuestions}
+                          className="w-full py-3 bg-secondary-900 hover:bg-black dark:bg-primary-900/50 dark:hover:bg-primary-900 text-white rounded-xl font-bold transition-colors flex items-center justify-center"
+                      >
+                          <Zap className="w-4 h-4 mr-2" /> Gerar Novas Questões
+                      </button>
+
                       <button 
                           onClick={onExit}
                           className="w-full py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold transition-colors"
@@ -153,9 +179,15 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
       return (
         <div className="flex flex-col items-center justify-center h-full p-8 text-center">
             <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Erro ao carregar</h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">Não foi possível gerar questões. Tente novamente.</p>
-            <button onClick={onExit} className="px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl">Voltar</button>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Falha na Geração</h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">Ocorreu um erro ao criar as questões.</p>
+            <button 
+                onClick={fetchNewQuestions} 
+                className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold flex items-center"
+            >
+                <RefreshCw className="w-4 h-4 mr-2" /> Tentar Novamente
+            </button>
+            <button onClick={onExit} className="mt-4 text-gray-400 hover:text-gray-600 text-sm">Voltar</button>
         </div>
       );
   }
@@ -164,21 +196,35 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
     <div className="max-w-screen-xl 2xl:max-w-[1600px] mx-auto p-6 2xl:p-10 h-full flex flex-col">
       {/* Header Progress */}
       <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
-            <button onClick={onExit} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-medium text-sm flex items-center">
-                <Home className="w-4 h-4 mr-1" /> Sair
+        <div className="flex items-center space-x-2 sm:space-x-4">
+            <button onClick={onExit} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-medium text-sm flex items-center px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+                <Home className="w-4 h-4 mr-1" /> <span className="hidden sm:inline">Sair</span>
             </button>
+            
+            {/* BOTÃO DE REGENERAR NO HEADER */}
+            <button 
+                onClick={fetchNewQuestions}
+                className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium text-sm flex items-center px-2 py-1 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                title="Gerar conjunto diferente de questões"
+            >
+                <RefreshCw className="w-4 h-4 mr-1" /> <span className="hidden sm:inline">Gerar Novas</span>
+            </button>
+
+            <div className="h-4 w-px bg-gray-300 dark:bg-slate-600 mx-2"></div>
+
             <span className="text-sm font-semibold text-gray-400">
-                Questão {currentIndex + 1} de {questions.length}
+                {currentIndex + 1} / {questions.length}
             </span>
         </div>
-        <div className="flex-1 mx-6 h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden max-w-xs">
+        
+        <div className="flex-1 mx-6 h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden max-w-xs hidden sm:block">
             <div 
                 className="h-full bg-primary-500 transition-all duration-300" 
                 style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
             ></div>
         </div>
-        <span className="text-xs px-3 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-full font-bold uppercase tracking-wide shadow-sm border border-primary-100 dark:border-primary-800 truncate max-w-[200px]">
+        
+        <span className="text-xs px-3 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-full font-bold uppercase tracking-wide shadow-sm border border-primary-100 dark:border-primary-800 truncate max-w-[150px] sm:max-w-[200px]">
             {topicName}
         </span>
       </div>
@@ -198,7 +244,7 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
                     </span>
                 </div>
                 <h2 className="text-xl 2xl:text-2xl font-semibold text-gray-900 dark:text-white leading-relaxed">
-                    {currentQuestion.text}
+                    <MarkdownRenderer content={currentQuestion.text} />
                 </h2>
             </div>
 
@@ -231,7 +277,7 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName
                         >
                             <div className="flex-shrink-0">{icon}</div>
                             <span className={`text-sm md:text-base 2xl:text-lg font-medium ${isAnswered && index === currentQuestion.correctAnswerIndex ? 'text-green-800 dark:text-green-300' : 'text-gray-700 dark:text-gray-200'}`}>
-                                {option}
+                                <MarkdownRenderer content={option} />
                             </span>
                         </button>
                     );
