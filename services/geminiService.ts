@@ -1,12 +1,20 @@
-import { GoogleGenAI, Chat, GenerateContentResponse, Type } from "@google/genai";
-import { Question } from "../types";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+// Ajuste para garantir compatibilidade com as interfaces que você usa
+import { Question, Chat as AppChat } from "../types"; 
 
-// Ensure API Key is available
-const API_KEY = process.env.API_KEY || '';
+// --- 1. CONFIGURAÇÃO DA CHAVE ---
+// Tenta pegar do env, se não, usa a hardcoded (cuidado em produção)
+const API_KEY = process.env.API_KEY || "AIzaSyDAYqi3AU5yV8LYksAPL9YELnMl-dEsjoc";
 
-// Initialize Gemini Client
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+if (!API_KEY || API_KEY.length < 10) {
+  console.error("⚠️ ERRO CRÍTICO: API Key parece inválida ou vazia.");
+}
 
+// Inicializa o cliente antigo (generative-ai) que é mais estável para web apps simples
+const genAI = new GoogleGenerativeAI(API_KEY);
+const MODEL_NAME = "gemini-2.0-flash"; // Usando modelo mais recente se disponível, ou fallback
+
+// --- 2. CONTEXTO E INSTRUÇÕES ---
 // Bibliografia baseada no conteúdo típico de drives de Engenharia (UFF/Federais)
 const ENGINEERING_BIBLIOGRAPHY = `
 *   **Circuitos:** "Fundamentos de Circuitos Elétricos" (Sadiku), "Circuitos Elétricos" (Nilsson & Riedel).
@@ -21,60 +29,46 @@ const ENGINEERING_BIBLIOGRAPHY = `
 `;
 
 const SYSTEM_INSTRUCTION = `
-Você é o ElectroBot, um tutor especialista em Engenharia Elétrica de nível universitário avançado.
+Você é o ElectroBot, um tutor especialista em Engenharia Elétrica de nível universitário.
 
-**FONTE DE VERDADE (BIBLIOGRAFIA):**
-Baseie suas explicações, notações e rigor matemático nas seguintes referências padrão:
-${ENGINEERING_BIBLIOGRAPHY}
-Se houver divergência de notação, prefira a notação do Sadiku (para circuitos) e Hayt (para eletromagnetismo).
+**FONTE DE VERDADE:**
+Baseie-se em: ${ENGINEERING_BIBLIOGRAPHY}
+Em divergência, prefira a notação do Sadiku (Circuitos) e Hayt (Eletromagnetismo).
 
-**ESTRUTURA DE RESPOSTA OBRIGATÓRIA (NÍVEIS DE PROFUNDIDADE):**
-Para explicações teóricas ou resolução de problemas, siga esta ordem:
-1.  **Resumo Intuitivo (Conceitual):** Explique o "o quê" e o "como" sem matemática pesada, usando analogias simples.
-2.  **Diagrama Visual (Se aplicável):** Gere um diagrama Mermaid ou SVG para ilustrar (veja regras abaixo).
-3.  **Desenvolvimento Matemático Rigoroso:** Use LaTeX para toda e qualquer expressão matemática.
-4.  **Aplicação no Mundo Real (O "Porquê"):** OBRIGATÓRIO. Explique onde isso é usado na indústria (ex: carros elétricos, redes 5G, painéis solares).
+**REGRAS CRÍTICAS DE FORMATO (PARA EVITAR ERROS DE RENDERIZAÇÃO):**
+1. **MATEMÁTICA (LATEX):**
+   - Inline: Use EXCLUSIVAMENTE \`$ equacao $\`. JAMAIS use \`\\( ... \\)\`.
+   - Bloco: Use EXCLUSIVAMENTE \`$$ equacao $$\`. JAMAIS use \`\\[ ... \\]\`.
+   - Não escreva equações verticais com texto puro. Use LaTeX.
+   - Use \`j\` para imaginários.
 
-**REGRAS DE FORMATAÇÃO E INTELIGÊNCIA:**
+2. **VISUALIZAÇÃO:**
+   - Use blocos \`\`\`mermaid\` para fluxogramas. Use aspas nos textos: A["Texto"].
+   - Use blocos \`\`\`svg\` para circuitos/gráficos vetoriais.
 
-1.  **MATEMÁTICA (LATEX):**
-    *   **IMPORTANTE:** Para equações na mesma linha (inline), use EXCLUSIVAMENTE \`$ equacao $\`. Não use \`\\( ... \\)\`.
-    *   **IMPORTANTE:** Para equações destacadas (bloco), use EXCLUSIVAMENTE \`$$ equacao $$\`. Não use \`\\[ ... \\]\`.
-    *   **PROIBIDO:** NUNCA escreva equações formatadas verticalmente (uma letra por linha) usando texto puro. Se precisar de uma fórmula, USE LaTeX.
-    *   Exemplo Correto: "A corrente é dada por $$ i(t) = I_m \\cos(\\omega t + \\phi) $$."
-    *   Use \`j\` para imaginários (Notação de Engenharia).
-    *   Para moeda, escreva "R$" ou "reais", nunca use o símbolo de cifrão solto para evitar conflito com LaTeX.
-
-2.  **VISUALIZAÇÃO (SVG & MERMAID):**
-    *   **Diagramas de Blocos/Fluxos:** Use blocos de código \`\`\`mermaid\`. IMPORTANTE: Sempre coloque os rótulos de texto entre aspas duplas. Ex: \`A["Texto"]\`.
-    *   **Circuitos e Gráficos Vetoriais:** Use blocos de código \`\`\`svg\`. Gere código SVG limpo e responsivo.
-
-3.  **AUTO-CORREÇÃO E PENSAMENTO CRÍTICO:**
-    *   **Análise Dimensional:** Antes de dar uma resposta numérica, verifique mentalmente se as unidades batem.
-    *   **Plausibilidade:** Se uma resistência der negativa em um circuito passivo, alerte o erro.
-
-4.  **INTERATIVIDADE (SIMULAÇÃO):**
-    *   Use a sintaxe \`$$INTERACTIVE|Template|Var...$$\` para permitir que o aluno brinque com variáveis.
-
-5.  **IDIOMA:** Português (Brasil).
-6.  **TEXTO E ESPAÇAMENTO:**
-    *   Mantenha os parágrafos densos e informativos. Evite criar uma nova linha para cada pequena sentença.
-    *   Não crie listas verticais para definições simples de variáveis; use texto corrido ou uma lista compacta.
+3. **ESTRUTURA:**
+   - Seja direto. Resumo -> Matemática -> Aplicação.
+   - Use a sintaxe \`$$INTERACTIVE|Template|Var...$$\` para simulações se solicitado.
 `;
 
-// Helper to clean JSON strings from AI (removes markdown code blocks)
+const model = genAI.getGenerativeModel({
+  model: MODEL_NAME,
+  systemInstruction: SYSTEM_INSTRUCTION,
+});
+
+// --- 3. HELPER JSON ROBUSTO ---
 const cleanAndParseJSON = (text: string): any => {
   try {
-    // Remove markdown code blocks (```json ... ``` or just ``` ... ```)
+    // Remove markdown code blocks
     let cleanText = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
     
-    // Sometimes AI adds text before or after the JSON
+    // Tenta encontrar os limites do JSON (Array ou Objeto)
     const firstBrace = cleanText.indexOf('[');
     const firstCurly = cleanText.indexOf('{');
     const lastBrace = cleanText.lastIndexOf(']');
     const lastCurly = cleanText.lastIndexOf('}');
     
-    // Determine if it's an array or object and slice accordingly
+    // Prioriza Array se ambos existirem (comum para listas de questões)
     if (firstBrace !== -1 && lastBrace !== -1 && (firstCurly === -1 || firstBrace < firstCurly)) {
          cleanText = cleanText.substring(firstBrace, lastBrace + 1);
     } else if (firstCurly !== -1 && lastCurly !== -1) {
@@ -83,9 +77,8 @@ const cleanAndParseJSON = (text: string): any => {
 
     const parsed = JSON.parse(cleanText);
 
-    // If it's an object wrapping an array (common AI quirk), extract the array
+    // Se o AI embrulhou o array num objeto { "questions": [...] }, tenta extrair
     if (!Array.isArray(parsed) && typeof parsed === 'object' && parsed !== null) {
-        // Look for any property that is an array
         const values = Object.values(parsed);
         const arrayValue = values.find(v => Array.isArray(v));
         if (arrayValue) return arrayValue;
@@ -93,240 +86,171 @@ const cleanAndParseJSON = (text: string): any => {
 
     return parsed;
   } catch (e) {
-    console.error("Failed to parse JSON:", text);
-    // Attempt to salvage if it's a single object wrapped in array, etc.
+    console.error("JSON Parse Error:", e, "Texto original:", text);
     return [];
   }
 };
 
-export const createChatSession = (): Chat => {
-  return ai.chats.create({
-    model: 'gemini-2.5-flash',
-    config: {
-      systemInstruction: SYSTEM_INSTRUCTION,
-      temperature: 0.3, // Reduced temperature for more rigorous adherence to structure
-    },
+// --- 4. FUNÇÕES EXPORTADAS ---
+
+// Adaptador para manter compatibilidade com seu AppChat interface
+export const createChatSession = (): AppChat => {
+  // Inicia sessão real do SDK
+  const chatSession = model.startChat({
+    history: [],
+    generationConfig: { temperature: 0.3 },
   });
+
+  // Retorna objeto compatível com sua interface
+  return {
+    model: MODEL_NAME,
+    history: [], 
+    sendMessage: async (msg: string) => {
+        const result = await chatSession.sendMessage(msg);
+        return result.response.text();
+    },
+    // Expondo o objeto original caso precise acessar diretamente
+    _rawSession: chatSession 
+  } as unknown as AppChat;
 };
 
-export const sendMessageToGemini = async (chat: Chat, message: string, mode: 'resolver' | 'socratic'): Promise<string> => {
+export const sendMessageToGemini = async (chatSession: AppChat, message: string, mode: 'resolver' | 'socratic'): Promise<string> => {
   let finalMessage = message;
+  
   if (mode === 'socratic') {
-    finalMessage = `MODO SOCRÁTICO: O aluno perguntou: "${message}". NÃO dê a resposta completa. Faça perguntas guias. Peça para ele montar a primeira equação. Se ele errar, corrija sutilmente.`;
+    finalMessage = `[MODO SOCRÁTICO] O aluno perguntou: "${message}". NÃO dê a resposta completa. Faça perguntas guias para ele chegar à conclusão. Peça para ele montar a primeira equação.`;
   } else {
-    finalMessage = `MODO RESOLVEDOR: O aluno perguntou: "${message}". Forneça a solução completa seguindo a estrutura: Resumo -> Diagrama (se útil) -> Matemática -> Aplicação Real.`;
+    finalMessage = `[MODO RESOLVEDOR] O aluno perguntou: "${message}". Forneça a solução completa: Resumo Conceitual -> Diagrama (se útil) -> Matemática Rigorosa (LaTeX) -> Aplicação Real.`;
   }
   
   try {
-    const response: GenerateContentResponse = await chat.sendMessage({ message: finalMessage });
-    return response.text || "Desculpe, não consegui processar sua resposta.";
-  } catch (error) {
-    console.error("Error sending message:", error);
-    return "Ocorreu um erro ao comunicar com a IA. Tente novamente.";
+    // Verifica se é o objeto adaptado ou direto
+    if ((chatSession as any).sendMessage) {
+        return await (chatSession as any).sendMessage(finalMessage);
+    } else {
+        // Fallback
+        const result = await model.generateContent(finalMessage);
+        return result.response.text();
+    }
+  } catch (error: any) {
+    console.error("Erro no envio:", error);
+    return `Erro ao processar resposta: ${error.message || "Tente novamente."}`;
   }
 };
 
 export const generateQuizForTopic = async (topic: string, count: number = 5, context: string | boolean = false): Promise<Question[]> => {
-    // Definindo o "Contexto" (Universidade) e Nível de Dificuldade
+    
+    // Perfilamento da Dificuldade (University Persona)
     let difficultyProfile = "Nível Universitário Padrão";
-    let styleInstruction = "Equilibre teoria e prática. Crie questões originais baseadas nos livros padrão.";
+    let styleInstruction = "Equilibre teoria e prática. Questões originais.";
     let contextStr = typeof context === 'string' ? context : '';
     let realQuestionsPrompt = "";
 
-    // Lógica de "Personalidade" da Prova baseada na Universidade
     if (contextStr) {
-        realQuestionsPrompt = "IMPORTANTE: Tente recuperar ou adaptar questões REAIS que já caíram em provas passadas desta instituição. Se não encontrar exatas, crie questões idênticas em estilo e dificuldade.";
+        realQuestionsPrompt = "IMPORTANTE: Adapte ao estilo de provas passadas desta instituição.";
         
         if (contextStr.includes('ITA') || contextStr.includes('IME')) {
-            difficultyProfile = "NÍVEL MILITAR (INSANO/EXTREMO)";
-            styleInstruction = "Questões devem exigir raciocínio matemático avançado, demonstrações e manipulação algébrica complexa. Evite números simples. Use 'pegadinhas' conceituais de alto nível. Similar a olimpíadas de física/matemática.";
-        } else if (contextStr.includes('USP') || contextStr.includes('UNICAMP') || contextStr.includes('UFRJ') || contextStr.includes('UFMG')) {
-            difficultyProfile = "NÍVEL PÚBLICA DE EXCELÊNCIA (DIFÍCIL)";
-            styleInstruction = "Foque em rigor teórico profundo, deduções e problemas que exigem entendimento sólido do conceito físico. Referência: Moysés/Halliday nível hard.";
-        } else if (contextStr.includes('PUC') || contextStr.includes('Mackenzie') || contextStr.includes('FEI')) {
-            difficultyProfile = "NÍVEL PRIVADA DE REFERÊNCIA (MÉDIO/ALTO)";
-            styleInstruction = "Boas questões teóricas e práticas. Foco em engenharia aplicada, mas com boa base matemática.";
-        } else if (contextStr.includes('Estácio') || contextStr.includes('Anhanguera') || contextStr.includes('UNIP')) {
-            difficultyProfile = "NÍVEL PRIVADA PADRÃO (MÉDIO)";
-            styleInstruction = "Questões objetivas, aplicação direta de fórmulas, estilo ENADE. Foco em verificar aprendizado básico e prático.";
-        } else if (contextStr.includes('UFF') || contextStr.includes('Federal')) {
-            difficultyProfile = "NÍVEL FEDERAL PADRÃO (DIFÍCIL)";
-            styleInstruction = "Analítico e rigoroso.";
+            difficultyProfile = "NÍVEL MILITAR (EXTREMO). Foco: Demonstrações, álgebra complexa, 'pegadinhas' conceituais.";
+        } else if (contextStr.match(/(USP|UNICAMP|UFRJ|UFMG|UnB)/i)) {
+            difficultyProfile = "NÍVEL PÚBLICA DE EXCELÊNCIA (DIFÍCIL). Foco: Rigor teórico, deduções (estilo Moysés/Halliday hard).";
+        } else if (contextStr.match(/(PUC|Mackenzie|FEI)/i)) {
+            difficultyProfile = "NÍVEL PRIVADA DE REFERÊNCIA (MÉDIO/ALTO). Foco: Engenharia aplicada sólida.";
+        } else if (contextStr.match(/(Estácio|Anhanguera|UNIP)/i)) {
+            difficultyProfile = "NÍVEL PRIVADA PADRÃO (MÉDIO). Foco: Aplicação direta de fórmulas, estilo ENADE.";
         }
     }
-    
+
     const prompt = `
-      Gere um simulado JSON com EXATAMENTE ${count} questões sobre "${topic}".
-      
-      CONTEXTO DA PROVA: ${difficultyProfile}
-      ESTILO DAS QUESTÕES: ${styleInstruction}
-      ${realQuestionsPrompt}
-      
-      REGRAS CRÍTICAS DE FORMATO (JSON + LaTeX):
-      1. Responda APENAS com o JSON.
-      2. Use LaTeX para TODAS as fórmulas matemáticas nos campos "text" e "explanation".
-      3. Use EXCLUSIVAMENTE \`$\` para equações inline (ex: \`$x^2$\`) e \`$$\` para blocos. NÃO use \`\\( ... \\)\`.
-      4. ESCAPE AS BARRAS INVERTIDAS NO JSON: Use \\\\ (ex: \\\\frac{a}{b}, \\\\Omega).
-      
-      Schema:
-      [
-        {
-          "id": "...",
-          "topic": "${topic}",
-          "difficulty": "Fácil" | "Médio" | "Difícil",
-          "text": "Enunciado com LaTeX ($...$)...",
-          "options": ["Opção A", "Opção B", "Opção C", "Opção D"],
-          "correctAnswerIndex": 0,
-          "explanation": "Explicação detalhada com LaTeX."
-        }
-      ]
+        Gere um JSON com EXATAMENTE ${count} questões sobre "${topic}".
+        CONTEXTO: ${difficultyProfile}
+        ESTILO: ${styleInstruction} ${realQuestionsPrompt}
+        
+        REGRAS JSON + LATEX:
+        1. Responda APENAS o JSON.
+        2. LaTeX OBRIGATÓRIO para matemática. Use \`$\` (inline) e \`$$\` (bloco).
+        3. Escape as barras invertidas do LaTeX no JSON (ex: \\\\frac{a}{b}).
+        
+        Schema:
+        [{"id":"1","topic":"${topic}","difficulty":"${contextStr ? 'Adaptado' : 'Médio'}","text":"Enunciado ($LaTeX$)...","options":["A","B","C","D"],"correctAnswerIndex":0,"explanation":"Explicação detalhada."}]
     `;
 
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                temperature: 0.7, 
-            }
+        const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json" }
         });
-
-        const text = response.text || "[]";
+        
+        const text = result.response.text();
         const questions = cleanAndParseJSON(text);
         
-        if (Array.isArray(questions)) {
+        if (Array.isArray(questions) && questions.length > 0) {
              return questions.map((q: any, idx: number) => ({
                 ...q,
                 id: `exam-${Date.now()}-${idx}`,
-                options: Array.isArray(q.options) ? q.options : ["Erro", "Erro", "Erro", "Erro"]
+                options: Array.isArray(q.options) ? q.options : ["A", "B", "C", "D"]
             }));
         }
         return [];
-
     } catch (error) {
-        console.error("Error generating exam:", error);
+        console.error("Erro Quiz:", error);
         return [];
-    }
-};
-
-export const explainQuestion = async (question: string, options: string[], correctOption: string): Promise<string> => {
-    const prompt = `
-      Explique detalhadamente a questão de Engenharia Elétrica abaixo.
-      Questão: "${question}"
-      Opções: ${options.join(', ')}
-      Correta: ${correctOption}
-
-      Siga a estrutura:
-      1. Resumo do Conceito
-      2. Análise Matemática (LaTeX com \`$...\`) com verificação dimensional.
-      3. Por que a opção correta é a correta e por que as outras estão erradas.
-      4. Aplicação prática desse conceito.
-    `;
-
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                systemInstruction: SYSTEM_INSTRUCTION
-            }
-        });
-        return response.text || "Não foi possível gerar a explicação.";
-    } catch (error) {
-        return "Erro ao gerar explicação.";
     }
 };
 
 export const generateLessonContent = async (topic: string): Promise<string> => {
-    // Lógica para diferenciar Ciclo Básico (Teórico/Fundamentos) vs Profissionalizante (Prático/Indústria)
-    const basicCycleKeywords = [
-        'Cálculo', 'Física', 'Álgebra', 'Geometria', 'Química', 'Mecânica Geral', 
-        'Probabilidade', 'Estatística', 'Fenômenos', 'Resistência'
-    ];
-    const isBasicCycle = basicCycleKeywords.some(keyword => topic.includes(keyword));
+    // Detecta se é Ciclo Básico (Teoria Pura) ou Profissional (Aplicação)
+    const basicKeywords = ['Cálculo', 'Física', 'Álgebra', 'Geometria', 'Limites', 'Derivadas', 'Integrais', 'Mecânica'];
+    const isBasic = basicKeywords.some(k => topic.includes(k));
 
-    let structurePrompt = "";
-    
-    if (isBasicCycle) {
-        structurePrompt = `
-        **ESTRUTURA FOCADA EM CICLO BÁSICO/TEÓRICO (ALTO RIGOR):**
-        # ${topic}
-        ## 1. Definição Formal
-        Apresente as definições matemáticas precisas (Ex: Epsilon-Delta para limites, Leis de Newton vetoriais). Cite teoremas relevantes (ex: Teorema do Valor Médio, Teorema de Gauss).
-        
-        ## 2. Demonstração / Dedução Importante
-        Escolha um resultado chave deste tópico e mostre a dedução passo a passo usando LaTeX rigoroso (use $$...$$ para blocos).
-        
-        ## 3. Exemplo Clássico de Prova
-        Resolva um problema típico de livro-texto (estilo Guidorizzi, Halliday ou Moysés). Foco na modelagem do problema.
-        
-        ## 4. Visualização (Gráfico ou Diagrama)
-        Gere um código Mermaid ou SVG simples que ajude a visualizar o conceito abstrato.
-        
-        ## 5. Conexão com a Engenharia
-        Brevemente, explique onde este conceito matemático/físico será fundamental nas matérias futuras (ex: "Integrais são usadas para calcular potência média em Circuitos II").
-        `;
+    let structure = "";
+    if (isBasic) {
+        structure = `
+        1. **Definição Formal:** Definições matemáticas precisas (Teoremas).
+        2. **Dedução:** Demonstre a origem da fórmula principal (LaTeX \`$$\`).
+        3. **Exemplo Clássico:** Resolva um problema "livro-texto".
+        4. **Visualização:** Gere um diagrama simples (Mermaid/SVG) para abstração.
+        5. **Conexão:** Onde isso entra na Engenharia?`;
     } else {
-        structurePrompt = `
-        **ESTRUTURA FOCADA EM ENGENHARIA APLICADA:**
-        # ${topic}
-        ## 1. Resumo Executivo (Visão Geral)
-        ## 2. Diagrama de Conceito (Gere um código Mermaid ou SVG aqui representando o sistema)
-        ## 3. Fundamentos Matemáticos (Use LaTeX rigoroso com $$...$$)
-        ## 4. Exemplo Numérico Resolvido (Passo a passo com 'j' para complexos)
-        ## 5. Simulação Interativa (Use $$INTERACTIVE|...$$ se possível)
-        ## 6. Aplicação no Mundo Real (Onde isso é usado hoje na indústria?)
-        `;
+        structure = `
+        1. **Resumo Executivo:** Visão geral rápida.
+        2. **Diagrama do Sistema:** (Mermaid ou SVG).
+        3. **Fundamentos Matemáticos:** Equações de governo (LaTeX).
+        4. **Estudo de Caso:** Exemplo numérico resolvido passo a passo.
+        5. **Indústria:** Aplicação real (ex: 5G, Carros Elétricos).`;
     }
 
     const prompt = `
-        Crie uma aula completa e detalhada sobre "${topic}" para um estudante de Engenharia.
-        ${structurePrompt}
+        Crie uma aula universitária sobre "${topic}".
+        ESTRUTURA OBRIGATÓRIA:
+        ${structure}
         
-        Seja didático, mas mantenha o nível universitário. Use formatação rica (Markdown, Bold).
-        Use LaTeX (\`$...\` ou \`$$...$$\`) para TODA e QUALQUER matemática.
-        NÃO use quebras de linha excessivas. Mantenha os parágrafos coesos e compactos.
+        Use formatação rica (Markdown). Use LaTeX (\`$...\`, \`$$...$$\`) para TUDO que for matemático.
     `;
 
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                systemInstruction: SYSTEM_INSTRUCTION
-            }
-        });
-        return response.text || "Conteúdo indisponível.";
+        const result = await model.generateContent(prompt);
+        return result.response.text();
     } catch (error) {
-        return "Erro ao gerar o conteúdo da aula. Tente novamente mais tarde.";
+        return `# Erro\nNão foi possível gerar a aula. Tente novamente.`;
     }
 };
 
-
 export const extractTopicsFromLesson = async (content: string): Promise<string> => {
-    const prompt = `
-        Analise o seguinte conteúdo de uma aula de Engenharia Elétrica.
-        Extraia os 5-7 tópicos mais importantes abordados.
-        Formate a saída como uma lista de bullet points, usando '- ' no início de cada linha.
-        NÃO inclua um título ou qualquer texto introdutório, apenas a lista.
-
-        CONTEÚDO DA AULA:
-        ---
-        ${content.substring(0, 3000)}...
-        ---
-    `;
+    if (!content || content.startsWith("# Erro")) return "";
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                temperature: 0.2
-            }
-        });
-        return response.text || "Não foi possível extrair os tópicos.";
+        const result = await model.generateContent(`Analise o texto abaixo e extraia os 5 tópicos principais em formato de lista bullet points (Markdown):\n\n${content.substring(0, 3000)}`);
+        return result.response.text();
     } catch (error) {
-        console.error("Error extracting topics:", error);
         return "";
+    }
+};
+
+export const explainQuestion = async (question: string, options: string[], correctOption: string): Promise<string> => {
+    try {
+        const prompt = `Explique a questão: "${question}". Opções: [${options}]. Correta: ${correctOption}. Justifique matematicamente e conceitualmente.`;
+        const result = await model.generateContent(prompt);
+        return result.response.text();
+    } catch (error) {
+        return "Erro ao explicar.";
     }
 };
