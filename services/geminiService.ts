@@ -4,10 +4,10 @@ import { Question, Chat as AppChat } from "../types";
 
 // --- 1. CONFIGURAÇÃO DA CHAVE ---
 // Tenta pegar do env, se não, usa a hardcoded (cuidado em produção)
-const API_KEY = process.env.API_KEY || "AIzaSyDAYqi3AU5yV8LYksAPL9YELnMl-dEsjoc";
+export const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 
 if (!API_KEY || API_KEY.length < 10) {
-  console.error("⚠️ ERRO CRÍTICO: API Key parece inválida ou vazia.");
+    console.error("⚠️ ERRO CRÍTICO: API Key parece inválida ou vazia.");
 }
 
 // Inicializa o cliente antigo (generative-ai) que é mais estável para web apps simples
