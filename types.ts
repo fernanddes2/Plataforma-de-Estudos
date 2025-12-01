@@ -11,7 +11,7 @@ export enum ViewState {
 export interface Question {
   id: string;
   topic: string;
-  difficulty: 'Fácil' | 'Médio' | 'Difícil';
+  difficulty: string; // ALTERADO: string genérica para aceitar o que vier da IA
   text: string;
   options: string[];
   correctAnswerIndex: number;
@@ -22,7 +22,7 @@ export interface QuizState {
   questions: Question[];
   currentIndex: number;
   score: number;
-  answers: Record<string, number>; // questionId -> selectedIndex
+  answers: Record<string, number>; 
   isFinished: boolean;
 }
 
@@ -33,13 +33,21 @@ export interface ChatMessage {
   isLoading?: boolean;
 }
 
+// ADICIONADO: A interface que faltava
+export interface Chat {
+  model: string;
+  history: ChatMessage[];
+  sendMessage: (msg: string) => Promise<string>;
+  _rawSession?: any;
+}
+
 export interface UserStats {
   questionsSolved: number;
-  accuracy: number; // percentage
+  accuracy: number; 
   streakDays: number;
   topicPerformance: {
     topic: string;
-    score: number; // 0-100
+    score: number; 
   }[];
 }
 
@@ -49,7 +57,7 @@ export interface Exam {
   subject: string;
   year: number;
   period: string;
-  url: string; // Mock URL
+  url: string; 
 }
 
 export interface LearningModule {
