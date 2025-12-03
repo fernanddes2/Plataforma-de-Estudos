@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createChatSession, sendMessageToGemini } from '../services/geminiService';
 import { ChatMessage } from '../types';
-import { Send, Bot, User, RefreshCw, Sparkles, Book, Zap, BrainCircuit } from 'lucide-react';
-import { Chat } from "@google/genai";
+import { Send, Bot, User, RefreshCw, Sparkles, Zap, BrainCircuit, AlertCircle } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
 
 type ChatMode = 'resolver' | 'socratic';
@@ -18,30 +16,28 @@ const AIChat: React.FC = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [chatMode, setChatMode] = useState<ChatMode>('resolver');
-  const chatSessionRef = useRef<Chat | null>(null);
+  
+  // Referência para scroll automático
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // Initialize chat session on mount
-    chatSessionRef.current = createChatSession();
-  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading || !chatSessionRef.current) return;
+    if (!input.trim() || isLoading) return;
 
     const userText = input;
     setInput('');
     
+    // 1. Adiciona mensagem do usuário na UI
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
       text: userText
     };
     
+    // 2. Cria mensagem de loading (placeholder)
     const loadingMsgId = 'loading-' + Date.now();
     const loadingMsg: ChatMessage = {
         id: loadingMsgId,
@@ -54,19 +50,47 @@ const AIChat: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const responseText = await sendMessageToGemini(chatSessionRef.current, userText, chatMode);
+      // 3. Prepara o prompt baseado no modo escolhido
+      let promptToSend = userText;
       
+      if (chatMode === 'socratic') {
+        promptToSend = `[INSTRUÇÃO DO SISTEMA: Atue como um tutor Socrático de Engenharia Elétrica. NÃO dê a resposta final imediatamente. Em vez disso, faça perguntas guiadas para ajudar o aluno a chegar à conclusão sozinho. Se o aluno estiver errado, corrija gentilmente e peça para repensar.]\n\nPergunta do aluno: ${userText}`;
+      } else {
+        promptToSend = `[INSTRUÇÃO DO SISTEMA: Atue como um especialista em Engenharia Elétrica. Resolva o problema passo a passo, mostrando fórmulas, conceitos e o resultado final de forma didática.]\n\nPergunta do aluno: ${userText}`;
+      }
+
+      // 4. Faz a chamada para a SUA API (Backend Vercel)
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: promptToSend }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Falha na comunicação com o servidor');
+      }
+
+      const data = await response.json();
+      
+      // 5. Atualiza a mensagem de loading com a resposta real
       setMessages(prev => prev.map(msg => {
         if (msg.id === loadingMsgId) {
-            return { ...msg, text: responseText, isLoading: false };
+            return { ...msg, text: data.text, isLoading: false };
         }
         return msg;
       }));
 
     } catch (error) {
+      console.error(error);
       setMessages(prev => prev.map(msg => {
         if (msg.id === loadingMsgId) {
-            return { ...msg, text: "Houve um erro na comunicação. Tente novamente.", isLoading: false };
+            return { 
+                ...msg, 
+                text: "⚠️ Houve um erro na conexão com o Tutor. Verifique sua internet ou tente novamente mais tarde.", 
+                isLoading: false 
+            };
         }
         return msg;
       }));
@@ -80,6 +104,15 @@ const AIChat: React.FC = () => {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleRestart = () => {
+    setMessages([{ 
+        id: Date.now().toString(), 
+        role: 'model', 
+        text: 'Conversa reiniciada. Em que posso ajudar agora?' 
+    }]);
+    setChatMode('resolver');
   };
 
   return (
@@ -97,10 +130,7 @@ const AIChat: React.FC = () => {
             </div>
             <div className="flex items-center space-x-2">
                 <button 
-                    onClick={() => {
-                        chatSessionRef.current = createChatSession();
-                        setMessages([{ id: Date.now().toString(), role: 'model', text: 'Conversa reiniciada. Em que posso ajudar agora?' }]);
-                    }}
+                    onClick={handleRestart}
                     className="p-2 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
                     title="Reiniciar conversa"
                 >
@@ -136,6 +166,7 @@ const AIChat: React.FC = () => {
                                     <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                                 </div>
                             ) : (
+                                /* Certifique-se que MarkdownRenderer aceita a prop 'content' ou 'text' conforme seu componente */
                                 <MarkdownRenderer content={msg.text} />
                             )}
                         </div>
