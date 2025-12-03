@@ -1,99 +1,171 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Question, Chat as AppChat } from "../types";
 
-// Setup Local
-const LOCAL_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
-const localGenAI = new GoogleGenerativeAI(LOCAL_API_KEY || "");
-const localModel = localGenAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+// --- 1. CONFIGURAÇÃO ---
+const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 
-// --- Função Híbrida (Backend Vercel ou Fallback Local) ---
-const callSmartAPI = async (prompt: string, history: any[] = []) => {
-  try {
-    const response = await fetch('/api/gemini', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, history }),
-    });
+if (!API_KEY) {
+  console.error("🚨 ERRO: VITE_GOOGLE_API_KEY não encontrada no .env.local");
+}
 
-    if (!response.ok) throw new Error("Backend indisponível");
-    const data = await response.json();
-    return data.text;
+const genAI = new GoogleGenerativeAI(API_KEY || "");
 
-  } catch (error) {
-    console.warn("⚠️ Usando modo local direto (SDK)...");
-    if (!LOCAL_API_KEY) throw new Error("Sem chave VITE_GOOGLE_API_KEY");
+// ATUALIZADO: Usando o modelo mais recente de 2025
+const model = genAI.getGenerativeModel({ 
+    model: "gemini-2.0-flash",
+    // Configurações de segurança para evitar bloqueios desnecessários em conteúdo acadêmico
+    generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 2000,
+    } 
+});
 
-    let text = "";
-    if (history.length > 0) {
-        const chatHistory = history.map(h => ({
-            role: h.role === 'model' ? 'model' : 'user',
-            parts: h.parts || [{ text: h.text || "" }]
-        }));
-        const chat = localModel.startChat({ history: chatHistory });
-        const result = await chat.sendMessage(prompt);
-        text = result.response.text();
-    } else {
-        const result = await localModel.generateContent(prompt);
-        text = result.response.text();
-    }
-    return text;
+// --- HELPERS ---
+const cleanJSON = (text: string) => {
+  // Remove blocos de código markdown se a IA colocar
+  let clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+  const firstOpen = clean.indexOf('[');
+  const lastClose = clean.lastIndexOf(']');
+  if (firstOpen !== -1 && lastClose !== -1) {
+    clean = clean.substring(firstOpen, lastClose + 1);
   }
+  return clean;
 };
 
-// --- Funções Exportadas ---
+// --- FUNÇÕES DO APP ---
 
 export const createChatSession = (): AppChat => {
-  const history: any[] = [];
+  const chat = model.startChat({
+    history: [],
+  });
+
   return {
     model: "gemini-2.0-flash",
-    history: history,
+    history: [],
     sendMessage: async (msg: string) => {
-      const responseText = await callSmartAPI(msg, [...history]);
-      history.push({ role: "user", parts: [{ text: msg }] });
-      history.push({ role: "model", parts: [{ text: responseText }] });
-      return responseText;
+      try {
+        const result = await chat.sendMessage(msg);
+        return result.response.text();
+      } catch (error) {
+        console.error("Erro Chat:", error);
+        return "Erro de conexão com o Gemini 2.0. Verifique sua chave.";
+      }
     },
-    _rawSession: null
+    _rawSession: chat
   };
 };
 
 export const sendMessageToGemini = async (chatSession: AppChat, message: string, mode: 'resolver' | 'socratic'): Promise<string> => {
   let finalPrompt = message;
+
+  // Engenharia de Prompt aprimorada para o modelo 2.0
   if (mode === 'socratic') {
-    finalPrompt = `[MODO SOCRÁTICO] Aluno: "${message}". Guie-o com perguntas.`;
+    finalPrompt = `
+      [CONTEXTO: Tutor Universitário de Engenharia Elétrica]
+      O aluno perguntou: "${message}"
+      
+      DIRETRIZES:
+      1. NÃO dê a resposta final imediatamente.
+      2. Faça perguntas socráticas para guiar o raciocínio.
+      3. Se envolver cálculos, peça para o aluno montar a primeira equação.
+      4. Seja breve e encorajador.
+    `;
   } else {
-    finalPrompt = `[MODO RESOLVEDOR] Aluno: "${message}". Explique detalhadamente.`;
+    finalPrompt = `
+      [CONTEXTO: Especialista Sênior em Engenharia Elétrica]
+      O aluno perguntou: "${message}"
+      
+      DIRETRIZES:
+      1. Resolva passo a passo com rigor matemático.
+      2. Use notação LaTeX para todas as fórmulas (ex: $V = R \\cdot I$).
+      3. Explique o conceito físico por trás da matemática.
+      4. Se possível, dê um exemplo prático de aplicação industrial.
+    `;
+  }
+
+  if (chatSession && chatSession._rawSession) {
+    try {
+        const result = await chatSession._rawSession.sendMessage(finalPrompt);
+        return result.response.text();
+    } catch (e) {
+        console.error(e);
+        return "Erro ao processar mensagem.";
+    }
   }
   
-  if (chatSession && chatSession.sendMessage) {
-    return await chatSession.sendMessage(finalPrompt);
-  }
-  return await callSmartAPI(finalPrompt);
+  const result = await model.generateContent(finalPrompt);
+  return result.response.text();
 };
 
 export const generateQuizForTopic = async (topic: string, count: number = 5, context: string | boolean = ""): Promise<Question[]> => {
-  let ctx = typeof context === 'boolean' ? (context ? "Prova Difícil" : "Exercício") : context;
-  const prompt = `Gere um JSON com ${count} questões sobre "${topic}". Contexto: ${ctx}. 
-  Schema: [{"id":"1","topic":"${topic}","difficulty":"Médio","text":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"explanation":"..."}]`;
+  const difficultyContext = context ? "Nível Difícil (Estilo ITA/IME/Federais)" : "Nível Médio (Conceitual/Aplicação)";
+  
+  const prompt = `
+    Gere um Array JSON estrito com ${count} questões de Engenharia Elétrica sobre: "${topic}".
+    Contexto: ${difficultyContext}.
+    
+    FORMATO JSON OBRIGATÓRIO:
+    [
+      {
+        "id": "q1",
+        "topic": "${topic}",
+        "difficulty": "Médio",
+        "text": "Enunciado da questão aqui (Use LaTeX para fórmulas)...",
+        "options": ["Alternativa A", "Alternativa B", "Alternativa C", "Alternativa D"],
+        "correctAnswerIndex": 0,
+        "explanation": "Explicação detalhada."
+      }
+    ]
+  `;
 
   try {
-    let text = await callSmartAPI(prompt);
-    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    const start = text.indexOf('['); const end = text.lastIndexOf(']');
-    const questions = JSON.parse(text.substring(start, end + 1));
-    return questions.map((q: any, i: number) => ({ ...q, id: `${Date.now()}-${i}`, options: q.options || ["A","B","C","D"] }));
-  } catch (e) { console.error(e); return []; }
+    const result = await model.generateContent(prompt);
+    const text = cleanJSON(result.response.text());
+    const questions = JSON.parse(text);
+
+    return questions.map((q: any, i: number) => ({
+      ...q,
+      id: `${Date.now()}-${i}`,
+      options: q.options || ["A", "B", "C", "D"],
+      // Garante campos opcionais
+      difficulty: q.difficulty || "Médio",
+      text: q.text || "Erro no enunciado",
+      explanation: q.explanation || "Sem explicação."
+    }));
+  } catch (error) {
+    console.error("Erro Quiz:", error);
+    return [];
+  }
 };
 
-export const generateLessonContent = async (topic: string) => callSmartAPI(`Crie aula sobre: ${topic}. Markdown/LaTeX.`);
+export const generateLessonContent = async (topic: string): Promise<string> => {
+  const prompt = `
+    Crie uma aula completa sobre "${topic}" para graduandos de Engenharia Elétrica.
+    Use formatação Markdown rica.
+    
+    Estrutura:
+    1. Definição Conceitual
+    2. Modelagem Matemática (Use LaTeX $)
+    3. Exemplo Numérico Resolvido
+    4. Aplicação Prática
+  `;
+  try {
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (e) { return "# Erro ao gerar aula."; }
+};
 
-export const extractTopicsFromLesson = async (content: string) => callSmartAPI(`Resuma tópicos: ${content.substring(0,1000)}`);
+export const extractTopicsFromLesson = async (content: string): Promise<string> => {
+  try {
+      const result = await model.generateContent(`Extraia os 5 conceitos-chave deste texto em bullet points: ${content.substring(0, 1500)}`);
+      return result.response.text();
+  } catch (e) { return ""; }
+};
 
-// CORREÇÃO: Adicionada a assinatura correta com 3 argumentos
 export const explainQuestion = async (questionText: string, options?: string[], correctOption?: string): Promise<string> => {
-  let prompt = `Explique conceitualmente: "${questionText}"`;
-  if (options && correctOption) {
-      prompt += `\nOpções: [${options.join(', ')}]. Correta: ${correctOption}.`;
-  }
-  return await callSmartAPI(prompt);
+   const prompt = `Explique a questão: "${questionText}". \nOpções: [${options?.join(', ')}]. \nCorreta: ${correctOption}. \nJustifique física e matematicamente.`;
+   const result = await model.generateContent(prompt);
+   return result.response.text();
 };
