@@ -1,6 +1,3 @@
-// types.ts - Arquivo COMPLETO de definições
-
-// 1. Navegação
 export enum ViewState {
   DASHBOARD = 'DASHBOARD',
   QUESTION_BANK = 'QUESTION_BANK',
@@ -11,11 +8,10 @@ export enum ViewState {
   QUIZ_ACTIVE = 'QUIZ_ACTIVE'
 }
 
-// 2. Questões e Quiz
 export interface Question {
   id: string;
   topic: string;
-  difficulty: string; // String para aceitar "Fácil", "Médio", "Difícil" ou "Adaptado"
+  difficulty: 'Fácil' | 'Médio' | 'Difícil';
   text: string;
   options: string[];
   correctAnswerIndex: number;
@@ -26,30 +22,20 @@ export interface QuizState {
   questions: Question[];
   currentIndex: number;
   score: number;
-  answers: Record<string, number>; // Mapa: ID da questão -> Índice da resposta escolhida
+  answers: Record<string, number>; // questionId -> selectedIndex
   isFinished: boolean;
 }
 
-// 3. Chat (IA Tutor)
 export interface ChatMessage {
   id: string;
   role: 'user' | 'model';
   text: string;
-  parts?: { text: string }[]; // Para compatibilidade com o formato do Google
   isLoading?: boolean;
 }
 
-export interface Chat {
-  model: string;
-  history: ChatMessage[];
-  sendMessage: (msg: string) => Promise<string>;
-  _rawSession?: any; // Para guardar a sessão original do SDK, se necessário
-}
-
-// 4. Estatísticas do Usuário (O QUE ESTAVA FALTANDO)
 export interface UserStats {
   questionsSolved: number;
-  accuracy: number; // Porcentagem (0-100)
+  accuracy: number; // percentage
   streakDays: number;
   topicPerformance: {
     topic: string;
@@ -57,22 +43,20 @@ export interface UserStats {
   }[];
 }
 
-// 5. Provas e Arquivos
 export interface Exam {
   id: string;
-  university: string; // String genérica para aceitar qualquer faculdade
+  university: 'UFF' | 'Estácio de Sá';
   subject: string;
   year: number;
   period: string;
-  url: string; // Link simulado
+  url: string; // Mock URL
 }
 
-// 6. Módulos de Aprendizado (O QUE ESTAVA FALTANDO)
 export interface LearningModule {
   id: string;
   title: string;
   description: string;
-  progress: number; // 0-100
+  progress: number;
   totalLessons: number;
   completedLessons: number;
 }
