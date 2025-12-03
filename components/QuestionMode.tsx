@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Question } from '../types';
-import { CheckCircle, XCircle, AlertCircle, ChevronRight, RefreshCw, Home, Trophy, Zap, Sparkles } from 'lucide-react';
-// Importando as funções do serviço novo que criamos
+import { CheckCircle, XCircle, ArrowRight, AlertCircle, Sparkles, ChevronRight, RefreshCw, Home, Trophy, Zap } from 'lucide-react';
 import { explainQuestion, generateQuizForTopic } from '../services/geminiService';
 import MarkdownRenderer from './MarkdownRenderer';
 
 interface QuestionModeProps {
+  initialQuestions?: Question[]; 
   topicName: string;
-  isExamMode?: boolean; // Isso define se é Banco de Questões (false) ou Prova (true)
+  isExamMode?: boolean;
   onExit: () => void;
   onUpdateStats: (correct: boolean) => void;
 }
 
-const QuestionMode: React.FC<QuestionModeProps> = ({ topicName, isExamMode = false, onExit, onUpdateStats }) => {
-  const [questions, setQuestions] = useState<Question[]>([]);
+const QuestionMode: React.FC<QuestionModeProps> = ({ initialQuestions, topicName, isExamMode = false, onExit, onUpdateStats }) => {
+  const [questions, setQuestions] = useState<Question[]>(initialQuestions || []);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -22,11 +22,26 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ topicName, isExamMode = fal
   const [loadingAi, setLoadingAi] = useState(false);
   const [quizFinished, setQuizFinished] = useState(false);
   const [score, setScore] = useState(0);
-  
-  // Ref para evitar chamada dupla no React Strict Mode
   const hasFetched = useRef(false);
 
-  // Função Principal: Chama a IA
+  // Fetch questions on mount
+  useEffect(() => {
+    const loadQuestions = async () => {
+        if (initialQuestions && initialQuestions.length > 0) {
+            setQuestions(initialQuestions);
+            setLoading(false);
+            return;
+        }
+
+        if (hasFetched.current) return;
+        hasFetched.current = true;
+
+        await fetchNewQuestions();
+    };
+    loadQuestions();
+  }, [topicName, initialQuestions, isExamMode]);
+
+  // --- NOVA FUNÇÃO: Buscar novas questões ---
   const fetchNewQuestions = async () => {
       setLoading(true);
       setQuestions([]);
@@ -38,39 +53,23 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ topicName, isExamMode = fal
       setAiExplanation(null);
 
       try {
-          // Define quantidade: 12 para Provas (mais difícil), 10 para Banco (rápido)
-          const count = isExamMode ? 12 : 10;
-          
-          // CHAMA O SERVIÇO NOVO
-          // Passamos isExamMode para a IA saber se deve pegar pesado (ITA/USP) ou leve
-          const newQuestions = await generateQuizForTopic(topicName, count, isExamMode);
-          
-          if (newQuestions.length > 0) {
-            setQuestions(newQuestions);
-          } else {
-            // Se a IA falhar e retornar vazio
-            throw new Error("Nenhuma questão gerada");
-          }
+          // Aumentado a quantidade conforme pedido: 12 para Provas, 15 para Banco
+          const questionCount = isExamMode ? 12 : 15;
+          const newQuestions = await generateQuizForTopic(topicName, questionCount, isExamMode);
+          setQuestions(newQuestions);
       } catch (e) {
-          console.error("Erro ao buscar questões:", e);
+          console.error(e);
       } finally {
           setLoading(false);
       }
   };
 
-  // Carrega ao abrir
-  useEffect(() => {
-    if (!hasFetched.current) {
-        hasFetched.current = true;
-        fetchNewQuestions();
-    }
-  }, [topicName, isExamMode]);
-
   const currentQuestion = questions[currentIndex];
   const isCorrect = currentQuestion ? selectedOption === currentQuestion.correctAnswerIndex : false;
 
   const handleSelect = (index: number) => {
-    if (!isAnswered) setSelectedOption(index);
+    if (isAnswered) return;
+    setSelectedOption(index);
   };
 
   const handleSubmit = () => {
@@ -104,62 +103,70 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ topicName, isExamMode = fal
     setLoadingAi(false);
   };
 
-  // TELA DE CARREGAMENTO
   if (loading) {
       return (
           <div className="flex flex-col items-center justify-center h-full p-8 text-center animate-fade-in">
               <div className="w-16 h-16 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-6"></div>
               <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
-                  {isExamMode ? 'Consultando Acervo de Provas...' : 'Gerando Questões...'}
+                  {isExamMode ? 'Elaborando Prova' : 'Gerando Questões'}
               </h2>
               <p className="text-gray-500 dark:text-gray-400 max-w-md">
-                  O ElectroBot está criando exercícios personalizados sobre <strong>{topicName}</strong> usando Inteligência Artificial.
+                  O ElectroBot está buscando questões {isExamMode ? 'reais de provas anteriores' : 'no banco de dados'} sobre <strong>{topicName}</strong>...
               </p>
           </div>
       );
   }
 
-  // TELA DE ERRO (Caso a IA falhe)
-  if (!currentQuestion && !loading) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-            <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Ops!</h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">Não foi possível gerar questões agora.</p>
-            <button onClick={fetchNewQuestions} className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold flex items-center">
-                <RefreshCw className="w-4 h-4 mr-2" /> Tentar Novamente
-            </button>
-            <button onClick={onExit} className="mt-4 text-gray-400 hover:text-gray-600 text-sm">Voltar</button>
-        </div>
-      );
-  }
-
-  // TELA DE RESULTADO FINAL
   if (quizFinished) {
       const percentage = Math.round((score / questions.length) * 100);
       return (
           <div className="flex flex-col items-center justify-center h-full p-8 animate-fade-in-up">
               <div className="bg-white dark:bg-slate-800 p-10 rounded-3xl shadow-xl text-center max-w-lg w-full border border-gray-100 dark:border-slate-700">
-                  <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-                  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Simulado Finalizado!</h2>
-                  <p className="text-gray-500 dark:text-gray-400 mb-8">Tópico: {topicName}</p>
+                  <div className="inline-flex p-4 bg-yellow-50 dark:bg-yellow-900/30 rounded-full mb-6">
+                      <Trophy className="w-12 h-12 text-yellow-500" />
+                  </div>
+                  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Quiz Finalizado!</h2>
+                  <p className="text-gray-500 dark:text-gray-400 mb-8">Você completou os exercícios de {topicName}.</p>
                   
-                  <div className="flex justify-center gap-8 mb-8">
-                      <div className="text-center">
+                  <div className="grid grid-cols-2 gap-4 mb-8">
+                      <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-2xl">
                           <span className="block text-3xl font-bold text-primary-600 dark:text-primary-400">{score}/{questions.length}</span>
-                          <span className="text-xs text-gray-400 uppercase font-bold">Acertos</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500 uppercase font-bold">Acertos</span>
                       </div>
-                      <div className="text-center">
-                          <span className={`block text-3xl font-bold ${percentage >= 70 ? 'text-green-500' : 'text-orange-500'}`}>{percentage}%</span>
-                          <span className="text-xs text-gray-400 uppercase font-bold">Nota</span>
+                      <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-2xl">
+                          <span className={`block text-3xl font-bold ${percentage >= 70 ? 'text-green-500 dark:text-green-400' : 'text-orange-500 dark:text-orange-400'}`}>{percentage}%</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500 uppercase font-bold">Aproveitamento</span>
                       </div>
                   </div>
 
                   <div className="space-y-3">
-                      <button onClick={fetchNewQuestions} className="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold flex items-center justify-center">
-                          <Zap className="w-4 h-4 mr-2" /> Praticar Mais (Gerar Novas)
+                      <button 
+                          onClick={() => {
+                              // Resetar para refazer as MESMAS questões
+                              setCurrentIndex(0);
+                              setScore(0);
+                              setQuizFinished(false);
+                              setIsAnswered(false);
+                              setSelectedOption(null);
+                              setAiExplanation(null);
+                          }}
+                          className="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold transition-colors flex items-center justify-center"
+                      >
+                          <RefreshCw className="w-4 h-4 mr-2" /> Refazer este Quiz
                       </button>
-                      <button onClick={onExit} className="w-full py-3 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-xl font-bold">
+                      
+                      {/* NOVO BOTÃO: GERAR NOVO */}
+                      <button 
+                          onClick={fetchNewQuestions}
+                          className="w-full py-3 bg-secondary-900 hover:bg-black dark:bg-primary-900/50 dark:hover:bg-primary-900 text-white rounded-xl font-bold transition-colors flex items-center justify-center"
+                      >
+                          <Zap className="w-4 h-4 mr-2" /> Gerar Novas Questões
+                      </button>
+
+                      <button 
+                          onClick={onExit}
+                          className="w-full py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold transition-colors"
+                      >
                           Voltar ao Menu
                       </button>
                   </div>
@@ -168,42 +175,97 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ topicName, isExamMode = fal
       );
   }
 
-  // TELA DA QUESTÃO (Interface Principal)
+  if (!currentQuestion) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+            <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Falha na Geração</h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">Ocorreu um erro ao criar as questões.</p>
+            <button 
+                onClick={fetchNewQuestions} 
+                className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold flex items-center"
+            >
+                <RefreshCw className="w-4 h-4 mr-2" /> Tentar Novamente
+            </button>
+            <button onClick={onExit} className="mt-4 text-gray-400 hover:text-gray-600 text-sm">Voltar</button>
+        </div>
+      );
+  }
+
   return (
-    <div className="max-w-5xl mx-auto p-6 h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <button onClick={onExit} className="text-gray-400 hover:text-gray-600 flex items-center">
-            <Home className="w-4 h-4 mr-1" /> Sair
-        </button>
-        <span className="text-sm font-semibold text-gray-500">
-            Questão {currentIndex + 1} de {questions.length}
-        </span>
-        <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-lg font-bold">
-            {currentQuestion.difficulty}
+    <div className="max-w-screen-xl 2xl:max-w-[1600px] mx-auto p-6 2xl:p-10 h-full flex flex-col">
+      {/* Header Progress */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center space-x-2 sm:space-x-4">
+            <button onClick={onExit} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-medium text-sm flex items-center px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+                <Home className="w-4 h-4 mr-1" /> <span className="hidden sm:inline">Sair</span>
+            </button>
+            
+            {/* BOTÃO DE REGENERAR NO HEADER */}
+            <button 
+                onClick={fetchNewQuestions}
+                className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium text-sm flex items-center px-2 py-1 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                title="Gerar conjunto diferente de questões"
+            >
+                <RefreshCw className="w-4 h-4 mr-1" /> <span className="hidden sm:inline">Gerar Novas</span>
+            </button>
+
+            <div className="h-4 w-px bg-gray-300 dark:bg-slate-600 mx-2"></div>
+
+            <span className="text-sm font-semibold text-gray-400">
+                {currentIndex + 1} / {questions.length}
+            </span>
+        </div>
+        
+        <div className="flex-1 mx-6 h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden max-w-xs hidden sm:block">
+            <div 
+                className="h-full bg-primary-500 transition-all duration-300" 
+                style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
+            ></div>
+        </div>
+        
+        <span className="text-xs px-3 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-full font-bold uppercase tracking-wide shadow-sm border border-primary-100 dark:border-primary-800 truncate max-w-[150px] sm:max-w-[200px]">
+            {topicName}
         </span>
       </div>
 
-      {/* Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1 overflow-y-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 2xl:gap-12 flex-1 overflow-y-auto custom-scrollbar">
         
-        {/* Esquerda: Enunciado e Opções */}
-        <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
-                <div className="text-lg font-medium text-gray-900 dark:text-white leading-relaxed">
-                    <MarkdownRenderer content={currentQuestion.text} />
+        {/* Left Column: Question & Options */}
+        <div className="lg:col-span-2 space-y-8">
+            <div>
+                <div className="flex items-center justify-between mb-4">
+                    <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${
+                        currentQuestion.difficulty === 'Fácil' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                        currentQuestion.difficulty === 'Médio' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
+                        'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                    }`}>
+                        {currentQuestion.difficulty}
+                    </span>
                 </div>
+                <h2 className="text-xl 2xl:text-2xl font-semibold text-gray-900 dark:text-white leading-relaxed">
+                    <MarkdownRenderer content={currentQuestion.text} />
+                </h2>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 2xl:space-y-4">
                 {currentQuestion.options.map((option, index) => {
-                    // Lógica de cores das opções
-                    let style = "border-gray-200 dark:border-slate-700 hover:border-blue-400";
+                    let styles = "border-gray-200 dark:border-slate-700 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-blue-50/50 dark:hover:bg-slate-700";
+                    let icon = <div className="w-5 h-5 rounded-full border border-gray-300 dark:border-gray-500 group-hover:border-primary-500"></div>;
+                    
                     if (isAnswered) {
-                        if (index === currentQuestion.correctAnswerIndex) style = "border-green-500 bg-green-50 dark:bg-green-900/20";
-                        else if (index === selectedOption) style = "border-red-500 bg-red-50 dark:bg-red-900/20";
+                        if (index === currentQuestion.correctAnswerIndex) {
+                            styles = "border-green-500 bg-green-50 dark:bg-green-900/20";
+                            icon = <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />;
+                        } else if (index === selectedOption && selectedOption !== currentQuestion.correctAnswerIndex) {
+                            styles = "border-red-500 bg-red-50 dark:bg-red-900/20";
+                            icon = <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />;
+                        } else {
+                            styles = "border-gray-200 dark:border-slate-800 opacity-50";
+                        }
                     } else if (selectedOption === index) {
-                        style = "border-blue-600 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-600";
+                        styles = "border-primary-500 bg-primary-50 dark:bg-primary-900/20 ring-1 ring-primary-500";
+                        icon = <div className="w-5 h-5 rounded-full border-[5px] border-primary-500"></div>;
                     }
 
                     return (
@@ -211,75 +273,96 @@ const QuestionMode: React.FC<QuestionModeProps> = ({ topicName, isExamMode = fal
                             key={index}
                             onClick={() => handleSelect(index)}
                             disabled={isAnswered}
-                            className={`w-full p-4 text-left rounded-xl border-2 transition-all ${style} bg-white dark:bg-slate-800`}
+                            className={`w-full p-4 2xl:p-5 text-left rounded-xl border-2 flex items-center space-x-4 transition-all duration-200 group bg-white dark:bg-slate-800 ${styles}`}
                         >
-                            <div className="flex items-center">
-                                <div className={`w-6 h-6 rounded-full border flex items-center justify-center mr-3 ${selectedOption === index ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300'}`}>
-                                    {String.fromCharCode(65 + index)}
-                                </div>
-                                <div className="text-gray-700 dark:text-gray-200">
-                                    <MarkdownRenderer content={option} />
-                                </div>
-                            </div>
+                            <div className="flex-shrink-0">{icon}</div>
+                            <span className={`text-sm md:text-base 2xl:text-lg font-medium ${isAnswered && index === currentQuestion.correctAnswerIndex ? 'text-green-800 dark:text-green-300' : 'text-gray-700 dark:text-gray-200'}`}>
+                                <MarkdownRenderer content={option} />
+                            </span>
                         </button>
                     );
                 })}
             </div>
 
-            {!isAnswered ? (
-                <button 
-                    onClick={handleSubmit} 
-                    disabled={selectedOption === null}
-                    className={`w-full py-4 rounded-xl font-bold text-white shadow-lg ${selectedOption !== null ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'}`}
-                >
-                    Confirmar Resposta
-                </button>
-            ) : (
-                <div className="flex justify-end">
-                    <button onClick={handleNext} className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold flex items-center hover:bg-blue-700 shadow-lg">
-                        Próxima <ChevronRight className="ml-2 w-5 h-5" />
+            {/* Action Buttons */}
+            <div className="pt-4">
+                {!isAnswered ? (
+                    <button 
+                        onClick={handleSubmit}
+                        disabled={selectedOption === null}
+                        className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all ${
+                            selectedOption !== null 
+                            ? 'bg-secondary-900 hover:bg-black dark:bg-primary-600 dark:hover:bg-primary-500 hover:shadow-xl transform hover:-translate-y-0.5' 
+                            : 'bg-gray-300 dark:bg-slate-700 cursor-not-allowed'
+                        }`}
+                    >
+                        Verificar Resposta
                     </button>
-                </div>
-            )}
+                ) : (
+                    <div className="flex justify-end">
+                         <button 
+                            onClick={handleNext}
+                            className="bg-primary-600 hover:bg-primary-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg flex items-center space-x-2 transition-all"
+                        >
+                            <span>{currentIndex === questions.length - 1 ? 'Finalizar' : 'Próxima'}</span>
+                            <ChevronRight className="w-5 h-5" />
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
 
-        {/* Direita: Explicação e IA */}
+        {/* Right Column: Explanation & AI */}
         <div className="lg:col-span-1">
             {isAnswered && (
-                <div className="space-y-4 animate-fade-in-up">
-                    {/* Card de Explicação Padrão */}
-                    <div className={`p-5 rounded-2xl border ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} dark:bg-slate-800 dark:border-slate-700`}>
-                        <div className="flex items-center gap-2 mb-2 font-bold">
-                            {isCorrect ? <CheckCircle className="text-green-600" /> : <XCircle className="text-red-600" />}
-                            <span className={isCorrect ? 'text-green-700' : 'text-red-700'}>
-                                {isCorrect ? 'Resposta Correta!' : 'Resposta Incorreta'}
-                            </span>
+                <div className="animate-fade-in-up space-y-4">
+                    {/* Base Explanation Card */}
+                    <div className={`p-6 rounded-2xl border ${isCorrect ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900' : 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900 shadow-sm'}`}>
+                        <div className="flex items-center space-x-2 mb-3">
+                            {isCorrect ? <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" /> : <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400" />}
+                            <h3 className={`font-bold ${isCorrect ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}`}>
+                                {isCorrect ? 'Correto!' : 'Incorreto'}
+                            </h3>
                         </div>
-                        <div className="text-sm text-gray-700 dark:text-gray-300">
+                        <div className="text-sm 2xl:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
                             <MarkdownRenderer content={currentQuestion.explanation} />
                         </div>
                     </div>
 
-                    {/* Botão para pedir ajuda ao Professor IA */}
-                    <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Sparkles className="text-yellow-400" />
-                            <h3 className="font-bold">Professor IA</h3>
+                    {/* AI Explanation Section */}
+                    <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                            <Sparkles className="w-24 h-24" />
                         </div>
                         
-                        {!aiExplanation ? (
-                            <div>
-                                <p className="text-sm text-indigo-200 mb-4">Não entendeu a lógica? Peça uma explicação passo a passo.</p>
+                        <h4 className="font-bold flex items-center gap-2 mb-3 text-blue-200">
+                            <Sparkles className="w-4 h-4" />
+                            ElectroBot AI
+                        </h4>
+
+                        {!aiExplanation && !loadingAi && (
+                            <div className="text-center py-4">
+                                <p className="text-sm text-gray-300 mb-4">
+                                    Não entendeu completamente? Peça uma explicação aprofundada.
+                                </p>
                                 <button 
                                     onClick={handleAskAI}
-                                    disabled={loadingAi}
-                                    className="w-full py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-bold transition-colors"
+                                    className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full"
                                 >
-                                    {loadingAi ? 'Analisando...' : 'Explicar Detalhadamente'}
+                                    Explicar Detalhadamente
                                 </button>
                             </div>
-                        ) : (
-                            <div className="text-sm text-gray-200 max-h-80 overflow-y-auto custom-scrollbar">
+                        )}
+
+                        {loadingAi && (
+                            <div className="flex flex-col items-center justify-center py-6 space-y-3">
+                                <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                                <span className="text-xs text-blue-200 animate-pulse">Analisando...</span>
+                            </div>
+                        )}
+
+                        {aiExplanation && (
+                            <div className="text-sm 2xl:text-base text-gray-200 space-y-2 max-h-64 2xl:max-h-96 overflow-y-auto custom-scrollbar leading-relaxed">
                                 <MarkdownRenderer content={aiExplanation} />
                             </div>
                         )}
