@@ -2,14 +2,14 @@ import { Question, UserStats, Exam, LearningModule } from './types';
 
 export const SUBJECTS_LIST = [
   // --- MATEMÁTICA ---
-  "Álgebra Linear",
+  "Fundamentos de Cálculo e Geometria",
+  "Cálculo Numérico",
+  "Cálculo Vetorial e Geometria Analítica",
   "Cálculo 1",
   "Cálculo 2",
   "Cálculo 3",
   "Cálculo 4",
-  "Fundamentos de Cálculo e Geometria",
-  "Cálculo Numérico",
-  "Cálculo Vetorial e Geometria Analítica",
+  "Álgebra Linear",
   "Probabilidade e Estatística",
   "Métodos Numéricos",
 
@@ -32,6 +32,7 @@ export const SUBJECTS_LIST = [
   "Circuitos Elétricos II (CA)",
   "Laboratório de Circuitos Elétricos",
   "Eletromagnetismo",
+  "Eletromagnetismo I",
 
   // --- ELETRÔNICA ---
   "Eletrônica",
@@ -93,7 +94,6 @@ export const SUBJECTS_LIST = [
   // --- GESTÃO, PROJETOS E PRÁTICA ---
   "Concepção e Projeto de Engenharia Elétrica",
   "Laboratório de Engenharia Elétrica e Computação",
-  "Administração e Economia para Engenharia",
   "Administração Aplicada à Engenharia",
   "Economia Aplicada à Engenharia",
   "Gestão da Manutenção",
@@ -149,7 +149,7 @@ const generateExams = (): Exam[] => {
         if (isCoreSubject || randomFactor) {
             exams.push({
                 id: `${uni.name.toLowerCase()}-${index}`,
-                university: uni.name, // Removemos o 'as any' se você atualizou o types.ts
+                university: uni.name as any,
                 subject: subject,
                 year: 2020 + (index % 4), // Cycles through 2020-2023
                 period: `${(index % 2) + 1}º Sem`,
@@ -184,5 +184,6 @@ export const INITIAL_STATS: UserStats = {
   topicPerformance: []
 };
 
-// Dados de exemplo iniciais para o banco de questões
+// Initial sample data just so the UI isn't completely empty on first load if needed, 
+// but logically we start from INITIAL_STATS in App.tsx
 export const QUESTION_BANK_DATA: Question[] = [];
