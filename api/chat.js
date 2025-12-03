@@ -29,7 +29,7 @@ export default async function handler(req, res) {
 
     // Chamada usando a sintaxe nova
     const response = await client.models.generateContent({
-      model: 'gemini-1.5-flash', // Ou 'gemini-2.0-flash-exp' se tiver acesso
+      model: 'gemini-2.5-flash', // Ou 'gemini-2.0-flash-exp' se tiver acesso
       contents: [
         {
           role: 'user',
